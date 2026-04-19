@@ -1,0 +1,625 @@
+import { useState, useMemo, useRef } from "react";
+
+const SEA = "#2A9D8F";
+const SEA_D = "#1B7A6E";
+const SEA_L = "#E6F5F1";
+const BLUSH = "#F4A7B9";
+const BLUSH_D = "#E0758F";
+const BLUSH_L = "#FDE8EF";
+const BG = "#F0FAF8";
+const WHITE = "#FFFFFF";
+const TXT = "#1A2E2B";
+const TXT_M = "#4A6B66";
+const TXT_L = "#7A9E99";
+const BDR = "rgba(42,157,143,0.18)";
+const BDR_B = "rgba(244,167,185,0.3)";
+
+const INDIA = {
+  "Jammu & Kashmir": { emoji: "🏔️", region: "North", tagline: "Heaven on Earth", places: ["Srinagar", "Gulmarg", "Pahalgam", "Sonamarg", "Dal Lake", "Yusmarg", "Vaishno Devi", "Patnitop", "Doodhpathri", "Betaab Valley", "Aru Valley", "Wular Lake", "Verinag", "Achabal", "Kokernag", "Charar-i-Sharief", "Gurez Valley", "Lolab Valley", "Bangus Valley", "Naranag Ruins"] },
+  "Ladakh": { emoji: "☀️", region: "North", tagline: "Land of High Passes", places: ["Leh", "Pangong Lake", "Nubra Valley", "Turtuk", "Diskit", "Hemis Monastery", "Khardung La", "Zanskar Valley", "Hanle", "Magnetic Hill", "Lamayuru", "Alchi Monastery", "Sham Valley", "Aryan Valley (Dah Hanu)", "Kargil", "Drass", "Suru Valley", "Padum", "Phugtal Monastery", "Rangdum"] },
+  "Himachal Pradesh": { emoji: "🌲", region: "North", tagline: "Land of Snow-Capped Gods", places: ["Shimla", "Manali", "Dharamshala", "Kasauli", "Dalhousie", "Spiti Valley", "Bir Billing", "Kullu", "Chail", "Kinnaur", "Chitkul", "Kalpa", "Sangla Valley", "Tirthan Valley", "Jibhi", "Sarahan", "Narkanda", "Barot", "Prashar Lake", "Lahaul & Pangi Valley"] },
+  "Uttarakhand": { emoji: "🕉️", region: "North", tagline: "Devbhoomi – Land of Gods", places: ["Rishikesh", "Haridwar", "Mussoorie", "Nainital", "Jim Corbett", "Auli", "Lansdowne", "Chakrata", "Munsiyari", "Valley of Flowers", "Kedarnath", "Badrinath", "Gangotri", "Yamunotri", "Chopta", "Binsar", "Kausani", "Ranikhet", "Pithoragarh", "Jaunsar Bawar"] },
+  "Punjab": { emoji: "🌾", region: "North", tagline: "Land of Five Rivers", places: ["Amritsar", "Chandigarh", "Patiala", "Anandpur Sahib", "Bathinda", "Kapurthala", "Tarn Taran", "Faridkot", "Sirhind", "Kiratpur Sahib"] },
+  "Haryana": { emoji: "🏟️", region: "North", tagline: "Cradle of Civilization", places: ["Kurukshetra", "Sultanpur Bird Sanctuary", "Morni Hills", "Badhkal Lake", "Pinjore Gardens", "Damdama Lake", "Panipat", "Sohna", "Bhindawas Lake", "Surajkund"] },
+  "Delhi": { emoji: "🏛️", region: "North", tagline: "Heart of India", places: ["Red Fort", "Qutub Minar", "India Gate", "Humayun's Tomb", "Lotus Temple", "Akshardham", "Chandni Chowk", "Lodhi Garden", "Hauz Khas Village", "Jama Masjid", "Raj Ghat", "Purana Qila", "Agrasen Ki Baoli", "Tughlaqabad Fort", "Mehrauli Village"] },
+  "Chandigarh": { emoji: "🌹", region: "North", tagline: "The City Beautiful", places: ["Rock Garden", "Rose Garden", "Sukhna Lake", "Capitol Complex", "Leisure Valley", "Pinjore Garden", "Morni Hills", "Fateh Burj", "Chandigarh Museum"] },
+  "Rajasthan": { emoji: "🏰", region: "West", tagline: "Land of Kings", places: ["Jaipur", "Udaipur", "Jodhpur", "Jaisalmer", "Pushkar", "Ranthambore", "Bundi", "Bikaner", "Chittorgarh", "Mount Abu", "Ajmer", "Sariska", "Shekhawati", "Osian", "Barmer", "Karauli", "Ranakpur", "Mandawa", "Abhaneri", "Gagron Fort"] },
+  "Gujarat": { emoji: "🦁", region: "West", tagline: "Land of Legends", places: ["Rann of Kutch", "Gir Forest", "Ahmedabad", "Vadodara", "Dwarka", "Somnath", "Saputara", "Diu", "Polo Forest", "Patan", "Champaner", "Lothal", "Modhera", "Palitana", "Gondal", "Dholavira", "Mandvi", "Nal Sarovar", "Shoolpaneshwar", "Balasinor Fossil Park"] },
+  "Maharashtra": { emoji: "🌊", region: "West", tagline: "Gateway of India", places: ["Mumbai", "Pune", "Aurangabad", "Lonavala", "Mahabaleshwar", "Matheran", "Kolhapur", "Nashik", "Alibaug", "Tarkarli", "Ajanta Caves", "Ellora Caves", "Sindhudurg", "Dapoli", "Amboli", "Panchgani", "Raigad Fort", "Bhimashankar", "Kaas Plateau", "Sandhan Valley"] },
+  "Goa": { emoji: "🌴", region: "West", tagline: "Sun, Sand & Spice", places: ["Panaji", "Calangute", "Palolem", "Arambol", "Anjuna", "Colva", "Vagator", "Divar Island", "Old Goa", "Dudhsagar Falls", "Netravali", "Cotigao Sanctuary", "Cabo de Rama", "Galjibag Beach", "Polem Beach", "Tambdi Surla Temple", "Rivona Caves", "Agonda", "Bondla", "Mollem"] },
+  "Madhya Pradesh": { emoji: "🐯", region: "Central", tagline: "Heart of India", places: ["Khajuraho", "Orchha", "Bandhavgarh", "Kanha", "Pench", "Bhopal", "Gwalior", "Ujjain", "Pachmarhi", "Mandu", "Jabalpur", "Sanchi", "Maheshwar", "Omkareshwar", "Amarkantak", "Chanderi", "Bhimbetka", "Satpura", "Chambal Ravines", "Bhedaghat"] },
+  "Chhattisgarh": { emoji: "🌿", region: "Central", tagline: "Rice Bowl of India", places: ["Jagdalpur", "Chitrakote Falls", "Bastar Tribal Region", "Tirathgarh Falls", "Bhoramdeo Temple", "Kanger Valley", "Barnawapara", "Kanker", "Dantewada", "Mainpat", "Achanakmar", "Sirpur", "Ratanpur", "Kondagaon Tribal Villages", "Abhujmad Forest"] },
+  "Jharkhand": { emoji: "⛏️", region: "Central", tagline: "Land of Forests", places: ["Ranchi", "Deoghar", "Hazaribagh", "Netarhat", "Betla National Park", "Parasnath Hill", "Hundru Falls", "Panchghagh Falls", "Rajrappa", "Baidyanath Dham", "Patratu Valley", "Lodh Falls", "Dalma Wildlife Sanctuary", "Topchanchi Lake", "Mccluskieganj"] },
+  "West Bengal": { emoji: "🐅", region: "East", tagline: "Cultural Heartland", places: ["Darjeeling", "Kolkata", "Sundarbans", "Kalimpong", "Dooars", "Digha", "Bishnupur", "Murshidabad", "Shantiniketan", "Cooch Behar", "Mirik", "Sandakphu", "Gorumara", "Samsing", "Mandarmani", "Neora Valley", "Taki", "Bakkhali", "Purulia", "Jhargram"] },
+  "Odisha": { emoji: "🛕", region: "East", tagline: "Soul of India", places: ["Bhubaneswar", "Puri", "Konark", "Chilika Lake", "Cuttack", "Simlipal", "Bhitarkanika", "Daringbadi", "Sambalpur", "Koraput", "Rayagada", "Kandhamal", "Jeypore", "Satkosia Gorge", "Khandadhar Falls", "Nandankanan", "Lalitgiri", "Ratnagiri", "Tikarpada", "Phulbani"] },
+  "Bihar": { emoji: "☸️", region: "East", tagline: "Land of Buddha", places: ["Bodh Gaya", "Nalanda", "Patna", "Rajgir", "Vaishali", "Pawapuri", "Vikramshila", "Kesariya Stupa", "Sitamarhi", "Sasaram", "Bhagalpur", "Madhubani Art Villages", "Darbhanga", "Valmiki Nagar", "Lauriya Nandangarh"] },
+  "Assam": { emoji: "🦏", region: "Northeast", tagline: "The Orchid State", places: ["Kaziranga", "Kamakhya Temple", "Majuli Island", "Sivasagar", "Tezpur", "Manas", "Pobitora", "Bhalukpong", "Haflong", "Dibru-Saikhowa", "Hoollongapar Gibbon Sanctuary", "Sualkuchi", "Diphu (Dima Hasao)", "Bodoland / Kokrajhar", "Raimona National Park"] },
+  "Arunachal Pradesh": { emoji: "🌅", region: "Northeast", tagline: "Land of Rising Sun", places: ["Tawang", "Bomdila", "Ziro", "Pasighat", "Namdapha", "Along", "Itanagar", "Roing", "Dirang", "Mechuka", "Anini", "Dong (Easternmost Village)", "Walong", "Kibithu", "Kaho", "Tirap", "Longding", "Changlang", "Pakke", "Shergaon"] },
+  "Meghalaya": { emoji: "☁️", region: "Northeast", tagline: "Abode of Clouds", places: ["Shillong", "Cherrapunji", "Mawlynnong", "Dawki", "Nongriat Root Bridges", "Mawsynram", "Jowai", "Tura", "Nongpoh", "Umiam Lake", "Laitlum Canyons", "Nohkalikai Falls", "Elephant Falls", "Balphakram", "Siju Cave", "Jaintia Hills", "Garo Hills", "Nongkhnum Island", "Mawphlang Sacred Grove", "Baghmara"] },
+  "Nagaland": { emoji: "🎭", region: "Northeast", tagline: "Land of Festivals", places: ["Kohima", "Dimapur", "Dzukou Valley", "Khonoma Village", "Mon (Konyak Tribe)", "Hornbill Festival", "Tuensang", "Kiphire", "Mokokchung", "Wokha", "Phek", "Zunheboto", "Peren", "Meluri", "Shamator"] },
+  "Manipur": { emoji: "💃", region: "Northeast", tagline: "Jewel of India", places: ["Imphal", "Loktak Lake", "Keibul Lamjao", "Moreh", "Ukhrul", "Senapati", "Kangla Fort", "Churachandpur", "Bishnupur", "Tamenglong", "Dzuko Valley", "Shirui Peak", "Nungba", "Chandel Hills", "Phangrei Plateau"] },
+  "Mizoram": { emoji: "🦋", region: "Northeast", tagline: "Land of Blue Mountains", places: ["Aizawl", "Phawngpui Blue Mountain", "Champhai", "Lunglei", "Reiek Hill", "Tam Dil Lake", "Vantawng Falls", "Palak Lake", "Murlen National Park", "Dampa Tiger Reserve", "Serchhip", "Hmuifang"] },
+  "Tripura": { emoji: "🏯", region: "Northeast", tagline: "Unexpected Backpacker Paradise", places: ["Agartala", "Ujjayanta Palace", "Neermahal", "Unakoti", "Sepahijala", "Jampui Hills", "Trishna Wildlife Sanctuary", "Kamalasagar", "Pilak", "Matabari", "Chabimura", "Dumboor Lake", "Rowa Wildlife", "Sipahijala"] },
+  "Sikkim": { emoji: "🌸", region: "Northeast", tagline: "Kingdom in the Clouds", places: ["Gangtok", "Pelling", "Lachung", "Yumthang Valley", "Gurudongmar Lake", "Tsomgo Lake", "Ravangla", "Namchi", "Yuksom", "Zuluk", "Rinchenpong", "Tashiding", "Khecheopalri Lake", "Varsey Sanctuary", "Barsey", "Kaluk", "Dentam", "Soreng", "Dzongu", "West Sikkim Villages"] },
+  "Tamil Nadu": { emoji: "🛕", region: "South", tagline: "Classical Civilization", places: ["Chennai", "Ooty", "Kodaikanal", "Madurai", "Mahabalipuram", "Thanjavur", "Rameswaram", "Kanyakumari", "Vellore", "Yelagiri", "Yercaud", "Trichy", "Chidambaram", "Kumbakonam", "Tranquebar", "Valparai", "Anamalai Hills", "Hogenakkal", "Pichavaram Mangroves", "Kolli Hills"] },
+  "Kerala": { emoji: "🌿", region: "South", tagline: "God's Own Country", places: ["Munnar", "Alleppey", "Wayanad", "Kochi", "Thekkady", "Kovalam", "Varkala", "Thrissur", "Kozhikode (Malabar)", "Kumarakom", "Bekal", "Athirapilly", "Vagamon", "Nelliampathi Hills", "Silent Valley", "Parambikulam", "Pookode Lake", "Banasura Sagar", "Nilambur", "Attapadi Tribal"] },
+  "Karnataka": { emoji: "🏛️", region: "South", tagline: "One State Many Worlds", places: ["Coorg", "Hampi", "Mysuru", "Chikmagalur", "Gokarna", "Sakleshpur", "Agumbe Rainforest", "Bangalore", "Badami–Aihole–Pattadakal", "Kabini", "Dandeli", "Jog Falls", "Udupi", "Belur & Halebidu", "Shravanabelagola", "Bijapur", "Bidar", "Kudremukh", "Yana Caves", "Devarayanadurga"] },
+  "Andhra Pradesh": { emoji: "🌶️", region: "South", tagline: "The Rising State", places: ["Visakhapatnam", "Tirupati", "Vijayawada", "Araku Valley", "Horsley Hills", "Nagarjunasagar", "Srisailam", "Belum Caves", "Gandikota", "Lepakshi", "Amaravati", "Undavalli Caves", "Borra Caves", "Papikondalu", "Maredumilli", "Tada Falls", "Pulicat Lake", "Buddhist Rock-Cut Caves", "Rollapadu Bird Sanctuary", "Ananthagiri Hills"] },
+  "Telangana": { emoji: "💎", region: "South", tagline: "The Emerging State", places: ["Hyderabad", "Warangal", "Nizamabad", "Karimnagar", "Golconda Fort", "Charminar", "Hussain Sagar", "Ramappa Temple", "Bhongir Fort", "Yadadri", "Kuntala Falls", "Pocharam Sanctuary", "Kinnerasani", "Medak Cathedral", "Kolanupaka", "Alampur", "Keesaragutta", "Mallela Teertha Falls", "Nagarjunasagar", "Srisailam"] },
+  "Andaman & Nicobar": { emoji: "🏝️", region: "Islands", tagline: "Jewel of Bay of Bengal", places: ["Port Blair", "Havelock Island", "Neil Island", "Radhanagar Beach", "Cellular Jail", "Barren Island", "Little Andaman", "Diglipur", "North Bay Island", "Ross Island", "Jolly Buoy Island", "Elephant Beach", "Baratang Limestone Caves", "Cinque Island", "Chidiya Tapu", "Mount Harriet", "Long Island", "Interview Island", "Passage Island", "Saddle Peak"] },
+  "Lakshadweep": { emoji: "🐠", region: "Islands", tagline: "Azure Yonder", places: ["Kavaratti Island", "Agatti Island", "Bangaram Island", "Minicoy Island", "Amindivi Islands", "Kadmat Island", "Kalpeni Island", "Andrott Island", "Kiltan Island", "Bitra Island"] },
+  "Puducherry": { emoji: "🇫🇷", region: "South", tagline: "French Riviera of the East", places: ["White Town Pondicherry", "Auroville", "Promenade Beach", "Paradise Beach", "Sri Aurobindo Ashram", "Serenity Beach", "Rock Beach", "Botanical Garden", "Ousteri Lake", "Karaikal", "Mahe", "Yanam", "Chunnambar Backwaters", "Tranquebar", "Arikamedu Roman Site"] },
+  "Daman & Diu": { emoji: "⛵", region: "West", tagline: "Coastal Heritage Union Territory", places: ["Daman Fort", "Diu Fort", "Gangeshwar Temple", "Nagoa Beach", "Silvassa", "Tribal Museum Dadra", "Vanganga Lake", "Dudhni Lake", "Hirwavan Garden", "St Paul's Church Diu"] },
+};
+
+const REGIONS = ["All", "North", "West", "Central", "East", "Northeast", "South", "Islands"];
+
+export default function App() {
+  const [step, setStep] = useState(0);
+  const [selState, setSelState] = useState(null);
+  const [selPlaces, setSelPlaces] = useState([]);
+  const [days, setDays] = useState(3);
+  const [budget, setBudget] = useState("moderate");
+  const [tStyle, setTStyle] = useState("explorer");
+  const [plan, setPlan] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [tab, setTab] = useState("itinerary");
+  const [stateQ, setStateQ] = useState("");
+  const [placeQ, setPlaceQ] = useState("");
+  const [region, setRegion] = useState("All");
+  const [showHidden, setShowHidden] = useState(false);
+  const planRef = useRef(null);
+
+  const HIDDEN_EXTRA = {
+    "Himachal Pradesh": ["Tirthan Valley", "Jibhi", "Barot", "Lahaul & Pangi Valley", "Seraj Region", "Prashar Lake", "Karsog", "Rajgundha Valley"],
+    "Uttarakhand": ["Munsiyari", "Milam Glacier", "Dharchula", "Jaunsar Bawar", "Niti Village", "Malari", "Dayara Bugyal", "Mana Village"],
+    "Ladakh": ["Hanle Dark Sky Reserve", "Phugtal Monastery", "Wanla", "Karsha Monastery", "Zangla Fort", "Nimmu Village"],
+    "Jammu & Kashmir": ["Gurez Valley", "Lolab Valley", "Bangus Valley", "Warwan Valley", "Tosamaidan", "Naranag Ruins"],
+    "Meghalaya": ["Nongriat", "Laitlum Canyons", "Mawlynnong", "Siju Cave", "Balphakram", "Nongkhnum Island"],
+    "Nagaland": ["Mon Konyak Tribe", "Khonoma Village", "Kiphire Frontier", "Meluri", "Shamator", "Noklak"],
+    "Arunachal Pradesh": ["Mechuka", "Anini", "Dong", "Walong", "Kibithu", "Kaho", "Shergaon", "Pakke Deep Forest"],
+    "Sikkim": ["Zuluk Silk Route", "Rinchenpong", "Dzongu", "Barsey", "Kaluk", "Dentam", "Soreng"],
+    "Rajasthan": ["Bundi", "Shekhawati Havelis", "Osian Desert Temples", "Karauli", "Abhaneri", "Kheechan Bird Village"],
+    "Gujarat": ["Dholavira Harappan Site", "Polo Forest", "Gondal Palace", "Balasinor Fossil Park", "Shoolpaneshwar"],
+    "Maharashtra": ["Tarkarli", "Amboli", "Kaas Plateau", "Purushwadi", "Bhandardara", "Sandhan Valley"],
+    "Goa": ["Divar Island", "Netravali Bubble Lake", "Cabo de Rama", "Tambdi Surla Temple", "Rivona Caves"],
+    "Karnataka": ["Agumbe Rainforest", "Badami-Aihole-Pattadakal", "Yana Caves", "Kudremukh", "Devarayanadurga"],
+    "Kerala": ["Nelliampathi Hills", "Vagamon", "Silent Valley", "Attapadi Tribal", "Parambikulam"],
+    "Tamil Nadu": ["Tranquebar", "Pichavaram Mangroves", "Kolli Hills", "Yelagiri", "Karaikudi Chettinad"],
+    "Andhra Pradesh": ["Gandikota Grand Canyon", "Buddhist Rock-Cut Caves", "Papikondalu Gorge", "Maredumilli"],
+    "Odisha": ["Daringbadi", "Koraput Tribal", "Satkosia Gorge", "Khandadhar Falls", "Bhitarkanika Inside"],
+    "West Bengal": ["Sandakphu", "Samsing", "Purulia Chotanagpur", "Taki", "Jayanti", "Mousuni Island"],
+    "Assam": ["Majuli Island", "Haflong Hills", "Diphu Dima Hasao", "Bodoland Kokrajhar", "Dehing Patkai"],
+    "Madhya Pradesh": ["Orchha", "Mandu", "Maheshwar Ghats", "Chanderi", "Bhimbetka", "Satpura", "Chambal"],
+    "Chhattisgarh": ["Bastar Tribal Villages", "Kanger Caves", "Mainpat Tibet of CG", "Sirpur", "Kondagaon"],
+  };
+
+  const filteredStates = useMemo(() => {
+    const q = stateQ.toLowerCase().trim();
+    return Object.keys(INDIA).filter(s => {
+      const info = INDIA[s];
+      const rOk = region === "All" || info.region === region;
+      if (!q) return rOk;
+      const extra = HIDDEN_EXTRA[s] || [];
+      return rOk && (
+        s.toLowerCase().includes(q) ||
+        info.places.some(p => p.toLowerCase().includes(q)) ||
+        extra.some(h => h.toLowerCase().includes(q))
+      );
+    });
+  }, [stateQ, region]);
+
+  const displayPlaces = useMemo(() => {
+    if (!selState) return [];
+    const info = INDIA[selState];
+    const extra = HIDDEN_EXTRA[selState] || [];
+    const pool = showHidden ? [...new Set([...info.places, ...extra])] : info.places;
+    if (!placeQ.trim()) return pool;
+    return pool.filter(p => p.toLowerCase().includes(placeQ.toLowerCase()));
+  }, [selState, showHidden, placeQ]);
+
+  const togglePlace = (p) => setSelPlaces(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+
+  const generatePlan = async () => {
+    setLoading(true);
+    setPlan(null);
+    const info = INDIA[selState];
+    const prompt = `You are LocalLands, India's best travel curator. Create a hyper-local, authentic trip plan.
+
+State: ${selState} (${info.tagline})
+Places: ${selPlaces.join(", ")}
+Days: ${days}
+Budget: ${budget} (budget=under Rs1500/day, moderate=Rs1500-4000/day, luxury=Rs4000+/day)
+Style: ${tStyle}
+
+Return ONLY valid JSON, no markdown fences:
+{
+  "headline": "8-word poetic headline",
+  "tagline": "2 vivid sentences about this journey",
+  "weatherNote": "season and weather tips",
+  "days": [{"day":1,"title":"Day 1 title with emoji","theme":"word","morning":{"activity":"name","description":"2 sentences","tip":"insider tip","duration":"X hrs"},"afternoon":{"activity":"name","description":"2 sentences","tip":"insider tip","duration":"X hrs"},"evening":{"activity":"name","description":"2 sentences","tip":"insider tip","duration":"X hrs"}}],
+  "food": [{"name":"dish","where":"actual dhaba or restaurant name","description":"what makes it special","price":"Rs XX-YY","emoji":"🍛","mustTry":true}],
+  "hotels": [{"name":"property name","type":"Budget/Homestay/Mid-range/Luxury/Camp","location":"area","price":"Rs XXX-YYYY/night","highlight":"USP","emoji":"🏡","rating":"4.2/5"}],
+  "transport": [{"mode":"bus/train/taxi/etc","from":"origin","to":"destination","detail":"practical advice","cost":"Rs XX-YY","emoji":"🚌","duration":"X hrs"}],
+  "hiddenGems": [{"name":"hidden spot name","why":"why special and unknown","bestTime":"when to visit","emoji":"💎"}],
+  "packingEssentials": ["item1","item2","item3","item4","item5"],
+  "localPhrases": [{"phrase":"local word","meaning":"English meaning","language":"language name"}],
+  "budgetSummary": {"accommodation":"Rs X-Y/night","food":"Rs X-Y/day","transport":"Rs X-Y total","activities":"Rs X-Y/day","total":"Rs X-Y for ${days} days"}
+}`;
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 4000,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const raw = (data.content && data.content[0] && data.content[0].text) ? data.content[0].text : "{}";
+      const cleaned = raw.replace(/```json/g, "").replace(/```/g, "").trim();
+      const parsed = JSON.parse(cleaned);
+      setPlan(parsed);
+      setTab("itinerary");
+      setStep(3);
+      setTimeout(() => { if (planRef.current) planRef.current.scrollIntoView({ behavior: "smooth" }); }, 150);
+    } catch (e) {
+      console.error("Plan generation error:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const reset = () => {
+    setStep(0); setSelState(null); setSelPlaces([]);
+    setDays(3); setBudget("moderate"); setTStyle("explorer");
+    setPlan(null); setStateQ(""); setPlaceQ(""); setRegion("All"); setShowHidden(false);
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: BG, color: TXT, fontFamily: "Georgia, serif" }}>
+      <style>{`
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        body { background: ${BG}; }
+        input, button { font-family: Georgia, serif; }
+        input:focus { outline: none; border-color: ${SEA} !important; box-shadow: 0 0 0 3px rgba(42,157,143,0.15) !important; }
+        input[type=range] { -webkit-appearance: none; height: 4px; border-radius: 2px; background: rgba(42,157,143,0.2); width: 100%; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: ${SEA}; cursor: pointer; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: rgba(42,157,143,0.25); border-radius: 3px; }
+        button:disabled { opacity: 0.65; cursor: not-allowed; }
+      `}</style>
+
+      {/* HEADER */}
+      <header style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(240,250,248,0.96)", backdropFilter: "blur(14px)", borderBottom: `1px solid ${BDR}`, boxShadow: "0 2px 16px rgba(42,157,143,0.08)" }}>
+        <div style={{ width: "100%", padding: "13px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <button onClick={reset} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 26 }}>🇮🇳</span>
+            <span style={{ fontSize: "1.65rem", fontWeight: 900, color: TXT }}>Local<em style={{ color: SEA, fontStyle: "italic" }}>Lands</em></span>
+          </button>
+          <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: SEA, background: SEA_L, padding: "5px 14px", borderRadius: 100, border: `1px solid ${BDR}` }}>Discover Hidden India</span>
+        </div>
+      </header>
+
+      {/* STEP BAR */}
+      {step < 3 && (
+        <div style={{ width: "100%", padding: "14px 40px", display: "flex" }}>
+          {["Choose State", "Select Places", "Trip Details"].map((l, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", fontWeight: 700, flexShrink: 0, background: i < step ? SEA : i === step ? BLUSH : "rgba(42,157,143,0.12)", color: i <= step ? "#fff" : TXT_L }}>
+                {i < step ? "✓" : i + 1}
+              </div>
+              <span style={{ fontSize: "0.82rem", whiteSpace: "nowrap", color: i === step ? SEA_D : i < step ? SEA : TXT_L, fontWeight: i === step ? 700 : 400 }}>{l}</span>
+              {i < 2 && <div style={{ width: 32, height: 1, background: BDR, flexShrink: 0, margin: "0 8px" }} />}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* MAIN */}
+      <main style={{ width: "100%", padding: "0 0 60px" }}>
+
+        {/* ── STEP 0: STATE ── */}
+        {step === 0 && (
+          <div style={{ animation: "fadeUp 0.5s ease" }}>
+            <div style={{ textAlign: "center", padding: "52px 0 40px" }}>
+              <div style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.18em", color: SEA, marginBottom: 12 }}>🇮🇳 ALL OF INDIA, UNLOCKED</div>
+              <h1 style={{ fontSize: "clamp(2rem,5vw,3.8rem)", fontWeight: 900, lineHeight: 1.1, letterSpacing: "-0.03em", marginBottom: 14, color: TXT }}>
+                Where in <em style={{ color: SEA, fontStyle: "italic" }}>Incredible India</em><br />are you headed?
+              </h1>
+              <p style={{ fontSize: "1rem", color: TXT_M, lineHeight: 1.7, maxWidth: 500, margin: "0 auto 28px" }}>
+                36 States & UTs · 1000+ places · Hidden gems only locals know
+              </p>
+              <div style={{ maxWidth: 520, margin: "0 auto", position: "relative", display: "flex", alignItems: "center" }}>
+                <span style={{ position: "absolute", left: 16, fontSize: 14, pointerEvents: "none" }}>🔍</span>
+                <input
+                  autoFocus
+                  value={stateQ}
+                  onChange={e => setStateQ(e.target.value)}
+                  placeholder="Search state, city or hidden place (e.g. Zanskar, Dzukou, Gandikota)…"
+                  style={{ width: "100%", padding: "13px 44px", background: WHITE, border: `1.5px solid ${BDR}`, borderRadius: 100, color: TXT, fontSize: "0.9rem", boxShadow: "0 2px 14px rgba(42,157,143,0.1)" }}
+                />
+                {stateQ && <button onClick={() => setStateQ("")} style={{ position: "absolute", right: 14, background: "none", border: "none", cursor: "pointer", color: TXT_L, fontSize: 13 }}>✕</button>}
+              </div>
+              {stateQ && <p style={{ fontSize: "0.78rem", color: TXT_L, marginTop: 8 }}>{filteredStates.length} state{filteredStates.length !== 1 ? "s" : ""} matched</p>}
+            </div>
+
+            {/* REGION PILLS */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginBottom: 30 }}>
+              {REGIONS.map(r => (
+                <button key={r} onClick={() => setRegion(r)} style={{ padding: "6px 15px", borderRadius: 100, fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", transition: "all .2s", background: region === r ? SEA : WHITE, color: region === r ? "#fff" : TXT_M, border: `1px solid ${region === r ? SEA : BDR}`, boxShadow: region === r ? "0 4px 14px rgba(42,157,143,0.28)" : "none" }}>
+                  {r}
+                </button>
+              ))}
+            </div>
+
+            {/* STATE GRID */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(195px,1fr))", gap: 14 }}>
+              {filteredStates.map(s => {
+                const info = INDIA[s];
+                return (
+                  <button key={s} onClick={() => { setSelState(s); setSelPlaces([]); setStep(1); }}
+                    style={{ background: WHITE, border: `1px solid ${BDR}`, borderRadius: 16, padding: "22px 18px", cursor: "pointer", textAlign: "left", color: TXT, boxShadow: "0 2px 10px rgba(42,157,143,0.05)", transition: "all .25s" }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 10px 28px rgba(244,167,185,0.3)"; e.currentTarget.style.borderColor = BLUSH; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 2px 10px rgba(42,157,143,0.05)"; e.currentTarget.style.borderColor = BDR; }}>
+                    <div style={{ fontSize: "2rem", marginBottom: 8 }}>{info.emoji}</div>
+                    <div style={{ fontWeight: 700, fontSize: "0.97rem", marginBottom: 4 }}>{s}</div>
+                    <div style={{ fontSize: "0.74rem", color: TXT_M, lineHeight: 1.5, marginBottom: 10 }}>{info.tagline}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: "0.65rem", color: SEA, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" }}>{info.region}</span>
+                      <span style={{ fontSize: "0.7rem", color: BLUSH_D, background: BLUSH_L, padding: "2px 9px", borderRadius: 100, fontWeight: 600 }}>{info.places.length}+</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {filteredStates.length === 0 && (
+              <div style={{ textAlign: "center", padding: "60px 0", color: TXT_L, fontSize: "0.95rem" }}>
+                No results for "<strong>{stateQ}</strong>" — try "Dzukou", "Tarkarli" or "Gurez"
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── STEP 1: PLACES ── */}
+        {step === 1 && selState && (
+          <div style={{ paddingTop: 36, animation: "fadeUp 0.5s ease" }}>
+            <button onClick={() => setStep(0)} style={{ background: "none", border: `1px solid ${BDR}`, color: TXT_M, padding: "7px 16px", borderRadius: 100, cursor: "pointer", fontSize: "0.82rem", marginBottom: 16 }}>← Back</button>
+            <div style={{ display: "inline-block", background: SEA_L, color: SEA_D, fontSize: "0.74rem", fontWeight: 700, padding: "5px 14px", borderRadius: 100, border: `1px solid ${BDR}`, marginBottom: 10 }}>{INDIA[selState].emoji} {selState}</div>
+            <h2 style={{ fontSize: "clamp(1.7rem,4vw,2.5rem)", fontWeight: 900, letterSpacing: "-0.025em", marginBottom: 8, color: TXT }}>Which places call to you?</h2>
+            <p style={{ fontSize: "0.96rem", color: TXT_M, lineHeight: 1.65, marginBottom: 24 }}>Select as many as you like. Toggle hidden gems for offbeat spots.</p>
+
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20, alignItems: "center" }}>
+              <div style={{ maxWidth: 360, position: "relative", display: "flex", alignItems: "center" }}>
+                <span style={{ position: "absolute", left: 14, fontSize: 13, pointerEvents: "none" }}>🔍</span>
+                <input value={placeQ} onChange={e => setPlaceQ(e.target.value)} placeholder="Search places here…"
+                  style={{ padding: "10px 38px 10px 36px", background: WHITE, border: `1.5px solid ${BDR}`, borderRadius: 100, color: TXT, fontSize: "0.87rem", width: "100%" }} />
+                {placeQ && <button onClick={() => setPlaceQ("")} style={{ position: "absolute", right: 12, background: "none", border: "none", cursor: "pointer", color: TXT_L, fontSize: 12 }}>✕</button>}
+              </div>
+              <button onClick={() => setShowHidden(!showHidden)}
+                style={{ padding: "10px 16px", borderRadius: 100, fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", background: showHidden ? BLUSH_L : WHITE, border: `1px solid ${showHidden ? BLUSH : BDR_B}`, color: BLUSH_D }}>
+                {showHidden ? "✨ Showing Hidden Gems" : "💎 Show Hidden Gems"}
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(165px,1fr))", gap: 10, marginBottom: 26 }}>
+              {displayPlaces.map(p => {
+                const extra = HIDDEN_EXTRA[selState] || [];
+                const isHidden = extra.includes(p) && !INDIA[selState].places.includes(p);
+                const active = selPlaces.includes(p);
+                return (
+                  <button key={p} onClick={() => togglePlace(p)}
+                    style={{ background: active ? SEA_L : isHidden ? "rgba(244,167,185,0.06)" : WHITE, border: `1px solid ${active ? SEA : isHidden ? "rgba(224,117,143,0.3)" : BDR}`, borderRadius: 12, padding: "13px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 9, color: TXT, textAlign: "left", position: "relative", boxShadow: active ? "0 4px 14px rgba(42,157,143,0.16)" : "none", transition: "all .18s" }}>
+                    {isHidden && <span style={{ position: "absolute", top: 5, right: 7, fontSize: "0.58rem", fontWeight: 700, color: BLUSH_D }}>💎</span>}
+                    <span style={{ width: 24, height: 24, borderRadius: "50%", background: active ? SEA : SEA_L, color: active ? "#fff" : SEA, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", fontWeight: 700, flexShrink: 0 }}>{active ? "✓" : "+"}</span>
+                    <span style={{ fontSize: "0.86rem", fontWeight: 600, lineHeight: 1.3 }}>{p}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {selPlaces.length > 0 && (
+              <div style={{ background: WHITE, border: `1px solid ${BDR}`, borderRadius: 14, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, flexWrap: "wrap", boxShadow: "0 4px 20px rgba(42,157,143,0.1)" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {selPlaces.map(p => <span key={p} style={{ background: SEA_L, color: SEA_D, border: `1px solid ${BDR}`, padding: "4px 11px", borderRadius: 100, fontSize: "0.77rem", fontWeight: 600 }}>{p}</span>)}
+                </div>
+                <button onClick={() => setStep(2)} style={{ background: SEA, color: "#fff", padding: "12px 26px", borderRadius: 100, border: "none", cursor: "pointer", fontSize: "0.9rem", fontWeight: 700, boxShadow: "0 6px 20px rgba(42,157,143,0.33)", whiteSpace: "nowrap" }}>
+                  Plan with {selPlaces.length} Place{selPlaces.length > 1 ? "s" : ""} →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── STEP 2: DETAILS ── */}
+        {step === 2 && (
+          <div style={{ paddingTop: 36, animation: "fadeUp 0.5s ease" }}>
+            <button onClick={() => setStep(1)} style={{ background: "none", border: `1px solid ${BDR}`, color: TXT_M, padding: "7px 16px", borderRadius: 100, cursor: "pointer", fontSize: "0.82rem", marginBottom: 16 }}>← Back</button>
+            <div style={{ display: "inline-block", background: SEA_L, color: SEA_D, fontSize: "0.74rem", fontWeight: 700, padding: "5px 14px", borderRadius: 100, border: `1px solid ${BDR}`, marginBottom: 10 }}>{INDIA[selState].emoji} {selState} · {selPlaces.join(", ")}</div>
+            <h2 style={{ fontSize: "clamp(1.7rem,4vw,2.5rem)", fontWeight: 900, letterSpacing: "-0.025em", marginBottom: 8, color: TXT }}>How do you travel?</h2>
+            <p style={{ fontSize: "0.96rem", color: TXT_M, lineHeight: 1.65, marginBottom: 28 }}>Every recommendation will be tailored just for you.</p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 24 }}>
+              {/* Days */}
+              <div style={{ background: WHITE, border: `1px solid ${BDR}`, borderRadius: 16, padding: "24px 20px" }}>
+                <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TXT_M, marginBottom: 18 }}>📅 Trip Duration</h3>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, marginBottom: 18 }}>
+                  <button onClick={() => setDays(Math.max(1, days - 1))} style={{ width: 36, height: 36, borderRadius: "50%", background: SEA_L, color: SEA, border: `1px solid ${BDR}`, cursor: "pointer", fontSize: "1.2rem", fontWeight: 700 }}>−</button>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "2.8rem", fontWeight: 900, color: SEA, lineHeight: 1 }}>{days}</div>
+                    <div style={{ fontSize: "0.78rem", color: TXT_L }}>day{days > 1 ? "s" : ""}</div>
+                  </div>
+                  <button onClick={() => setDays(Math.min(14, days + 1))} style={{ width: 36, height: 36, borderRadius: "50%", background: SEA_L, color: SEA, border: `1px solid ${BDR}`, cursor: "pointer", fontSize: "1.2rem", fontWeight: 700 }}>+</button>
+                </div>
+                <input type="range" min="1" max="14" value={days} onChange={e => setDays(Number(e.target.value))} style={{ marginBottom: 6 }} />
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: TXT_L }}><span>1 day</span><span>14 days</span></div>
+              </div>
+
+              {/* Budget */}
+              <div style={{ background: WHITE, border: `1px solid ${BDR}`, borderRadius: 16, padding: "24px 20px" }}>
+                <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TXT_M, marginBottom: 16 }}>💰 Budget Level</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {[{ id: "budget", emoji: "🎒", label: "Budget", desc: "Under Rs 1,500/day" }, { id: "moderate", emoji: "✈️", label: "Moderate", desc: "Rs 1,500–4,000/day" }, { id: "luxury", emoji: "💎", label: "Luxury", desc: "Rs 4,000+/day" }].map(b => (
+                    <button key={b.id} onClick={() => setBudget(b.id)}
+                      style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 12, cursor: "pointer", color: TXT, transition: "all .2s", background: budget === b.id ? SEA_L : BG, border: `1px solid ${budget === b.id ? SEA : BDR}`, boxShadow: budget === b.id ? "0 4px 12px rgba(42,157,143,0.14)" : "none" }}>
+                      <span style={{ fontSize: "1.3rem" }}>{b.emoji}</span>
+                      <div style={{ flex: 1, textAlign: "left" }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{b.label}</div>
+                        <div style={{ fontSize: "0.74rem", color: TXT_L }}>{b.desc}</div>
+                      </div>
+                      {budget === b.id && <span style={{ color: SEA, fontWeight: 700 }}>✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Style */}
+              <div style={{ background: WHITE, border: `1px solid ${BDR}`, borderRadius: 16, padding: "24px 20px", gridColumn: "1 / -1" }}>
+                <h3 style={{ fontSize: "0.86rem", fontWeight: 700, color: TXT_M, marginBottom: 16 }}>🎭 Travel Style</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 12 }}>
+                  {[{ id: "explorer", emoji: "🧭", label: "Explorer", desc: "Hidden gems & local life" }, { id: "adventurer", emoji: "⛰️", label: "Adventurer", desc: "Treks & outdoor thrills" }, { id: "foodie", emoji: "🍛", label: "Foodie", desc: "Culinary & street food" }, { id: "spiritual", emoji: "🕉️", label: "Spiritual", desc: "Temples & inner peace" }].map(s => (
+                    <button key={s.id} onClick={() => setTStyle(s.id)}
+                      style={{ padding: "17px 10px", borderRadius: 12, cursor: "pointer", color: TXT, textAlign: "center", transition: "all .2s", background: tStyle === s.id ? SEA_L : BG, border: `1px solid ${tStyle === s.id ? SEA : BDR}`, boxShadow: tStyle === s.id ? "0 4px 14px rgba(42,157,143,0.17)" : "none" }}>
+                      <div style={{ fontSize: "1.7rem", marginBottom: 7 }}>{s.emoji}</div>
+                      <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>{s.label}</div>
+                      <div style={{ fontSize: "0.71rem", color: TXT_L, marginTop: 4, lineHeight: 1.4 }}>{s.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ textAlign: "center" }}>
+              <button onClick={generatePlan} disabled={loading}
+                style={{ background: `linear-gradient(135deg,${SEA},${SEA_D})`, color: "#fff", padding: "15px 46px", borderRadius: 100, border: "none", cursor: "pointer", fontSize: "1.05rem", fontWeight: 700, boxShadow: "0 8px 26px rgba(42,157,143,0.36)" }}>
+                {loading
+                  ? <span style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "center" }}>
+                      <span style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", animation: "spin .7s linear infinite", display: "inline-block" }} />
+                      Crafting your {selState} adventure…
+                    </span>
+                  : "✨ Generate My LocalLands Plan"}
+              </button>
+              <p style={{ fontSize: "0.78rem", color: TXT_L, marginTop: 10 }}>AI-powered · Hyper-local · Hidden gems included</p>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 3: PLAN ── */}
+        {step === 3 && plan && (
+          <div ref={planRef} style={{ animation: "fadeUp 0.5s ease" }}>
+            {/* Banner */}
+            <div style={{ position: "relative", overflow: "hidden", background: `linear-gradient(135deg,${SEA},${SEA_D})`, borderRadius: 20, marginBottom: 20, padding: "48px 40px", boxShadow: "0 12px 40px rgba(42,157,143,0.28)" }}>
+              <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 70% 80% at 85% 40%, rgba(255,255,255,0.14), transparent)", pointerEvents: "none" }} />
+              <div style={{ position: "relative", zIndex: 1 }}>
+                <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "rgba(255,255,255,0.7)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 10 }}>
+                  {INDIA[selState] && INDIA[selState].emoji} {selState} · {days} Days · {budget.charAt(0).toUpperCase() + budget.slice(1)}
+                </div>
+                <h1 style={{ fontSize: "clamp(1.7rem,4vw,2.8rem)", fontWeight: 900, lineHeight: 1.15, marginBottom: 12, color: "#fff" }}>{plan.headline}</h1>
+                <p style={{ fontSize: "0.97rem", color: "rgba(255,255,255,0.82)", lineHeight: 1.7, maxWidth: 600, marginBottom: 16 }}>{plan.tagline}</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+                  {selPlaces.map(p => <span key={p} style={{ background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)", padding: "4px 14px", borderRadius: 100, fontSize: "0.8rem", fontWeight: 600 }}>{p}</span>)}
+                </div>
+                {plan.weatherNote && <div style={{ fontSize: "0.84rem", color: "rgba(255,255,255,0.75)", background: "rgba(255,255,255,0.12)", padding: "9px 16px", borderRadius: 10, display: "inline-block" }}>🌤 {plan.weatherNote}</div>}
+              </div>
+            </div>
+
+            {/* Budget summary */}
+            {plan.budgetSummary && (
+              <div style={{ background: WHITE, border: `1px solid ${BDR}`, borderRadius: 14, padding: "16px 22px", display: "flex", flexWrap: "wrap", gap: 18, marginBottom: 20, justifyContent: "space-around" }}>
+                {Object.entries(plan.budgetSummary).map(([k, v]) => (
+                  <div key={k} style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "0.66rem", color: TXT_L, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>{k.charAt(0).toUpperCase() + k.slice(1)}</div>
+                    <div style={{ fontSize: "0.88rem", fontWeight: 700, color: SEA_D }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* TABS */}
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", borderBottom: `1px solid ${BDR}`, marginBottom: 22 }}>
+              {[{ id: "itinerary", l: "🗓 Itinerary" }, { id: "food", l: "🍛 Food" }, { id: "hotels", l: "🏨 Hotels" }, { id: "transport", l: "🚌 Transport" }, { id: "hidden", l: "💎 Hidden Gems" }, { id: "tips", l: "🎒 Tips" }].map(t => (
+                <button key={t.id} onClick={() => setTab(t.id)}
+                  style={{ background: tab === t.id ? SEA_L : "none", border: "none", cursor: "pointer", padding: "10px 16px", color: tab === t.id ? SEA : TXT_M, fontSize: "0.83rem", fontWeight: 600, borderBottom: `2px solid ${tab === t.id ? SEA : "transparent"}`, borderRadius: "8px 8px 0 0", transition: "all .2s" }}>
+                  {t.l}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ paddingBottom: 24 }}>
+              {tab === "itinerary" && <ItinTab days={plan.days} />}
+              {tab === "food" && <FoodTab food={plan.food} />}
+              {tab === "hotels" && <HotelsTab hotels={plan.hotels} />}
+              {tab === "transport" && <TransTab transport={plan.transport} />}
+              {tab === "hidden" && <HiddenTab gems={plan.hiddenGems} />}
+              {tab === "tips" && <TipsTab packing={plan.packingEssentials} phrases={plan.localPhrases} stateName={selState} />}
+            </div>
+
+            <div style={{ textAlign: "center", paddingBottom: 32 }}>
+              <button onClick={reset} style={{ background: SEA_L, color: SEA, border: `1px solid ${BDR}`, padding: "12px 32px", borderRadius: 100, cursor: "pointer", fontSize: "0.92rem", fontWeight: 700 }}>🔄 Plan Another Trip</button>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <footer style={{ borderTop: `1px solid ${BDR}`, padding: "20px 32px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: "0.82rem", color: TXT_M, background: WHITE }}>
+        <span>🇮🇳 <strong style={{ color: SEA }}>LocalLands</strong> — Discover the Real India</span>
+        <span style={{ color: TXT_L }}>36 States & UTs · 1000+ Places · AI-Powered</span>
+      </footer>
+    </div>
+  );
+}
+
+/* ── ITINERARY ── */
+function ItinTab({ days = [] }) {
+  const [open, setOpen] = useState(0);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {days.map((d, i) => (
+        <div key={i} style={{ background: "#fff", border: `1px solid ${BDR}`, borderRadius: 13, overflow: "hidden" }}>
+          <button onClick={() => setOpen(open === i ? -1 : i)}
+            style={{ width: "100%", padding: "17px 20px", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", color: TXT, fontFamily: "Georgia,serif" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: `linear-gradient(135deg,${SEA},${SEA_D})`, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.97rem", fontWeight: 900, flexShrink: 0 }}>{d.day}</div>
+              <div style={{ textAlign: "left" }}>
+                <div style={{ fontWeight: 700, fontSize: "1rem" }}>{d.title}</div>
+                <div style={{ fontSize: "0.74rem", color: SEA }}>{d.theme}</div>
+              </div>
+            </div>
+            <span style={{ color: SEA, fontSize: 14 }}>{open === i ? "▲" : "▼"}</span>
+          </button>
+          {open === i && (
+            <div style={{ padding: "0 18px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
+              {["morning", "afternoon", "evening"].map(sl => d[sl] && (
+                <div key={sl} style={{ background: BG, border: `1px solid ${BDR}`, borderRadius: 12, padding: "14px" }}>
+                  <div style={{ display: "flex", gap: 12, marginBottom: 8, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: "1.3rem" }}>{sl === "morning" ? "🌅" : sl === "afternoon" ? "☀️" : "🌙"}</span>
+                    <div>
+                      <div style={{ fontSize: "0.67rem", color: TXT_L, textTransform: "uppercase", letterSpacing: "0.1em" }}>{sl} · {d[sl].duration}</div>
+                      <div style={{ fontWeight: 700, fontSize: "0.97rem", color: TXT }}>{d[sl].activity}</div>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: "0.86rem", color: TXT_M, lineHeight: 1.65, marginBottom: 10 }}>{d[sl].description}</p>
+                  <div style={{ fontSize: "0.79rem", color: SEA_D, background: SEA_L, border: `1px solid ${BDR}`, padding: "8px 12px", borderRadius: 8, lineHeight: 1.5 }}>💡 {d[sl].tip}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── FOOD ── */
+function FoodTab({ food = [] }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(245px,1fr))", gap: 14 }}>
+      {food.map((f, i) => (
+        <div key={i} style={{ background: WHITE, border: `1px solid ${BDR}`, borderRadius: 16, padding: "22px 20px", position: "relative" }}>
+          {f.mustTry && <div style={{ position: "absolute", top: 12, right: 12, background: BLUSH_L, color: BLUSH_D, border: `1px solid ${BDR_B}`, fontSize: "0.67rem", fontWeight: 700, padding: "3px 10px", borderRadius: 100 }}>🔥 Must Try</div>}
+          <div style={{ fontSize: "2.2rem", marginBottom: 10 }}>{f.emoji}</div>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 5 }}>{f.name}</h3>
+          <div style={{ fontSize: "0.78rem", color: SEA, marginBottom: 9 }}>📍 {f.where}</div>
+          <p style={{ fontSize: "0.85rem", color: TXT_M, lineHeight: 1.65, marginBottom: 12 }}>{f.description}</p>
+          <div style={{ fontWeight: 700, color: SEA_D, fontSize: "0.88rem" }}>{f.price}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── HOTELS ── */
+function HotelsTab({ hotels = [] }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(245px,1fr))", gap: 14 }}>
+      {hotels.map((h, i) => (
+        <div key={i} style={{ background: WHITE, border: `1px solid ${BDR}`, borderRadius: 16, padding: "22px 20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <span style={{ fontSize: "2rem" }}>{h.emoji}</span>
+            <span style={{ background: SEA_L, color: SEA_D, border: `1px solid ${BDR}`, fontSize: "0.7rem", fontWeight: 700, padding: "4px 12px", borderRadius: 100 }}>{h.type}</span>
+          </div>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 5 }}>{h.name}</h3>
+          <div style={{ fontSize: "0.78rem", color: SEA, marginBottom: 9 }}>📍 {h.location}</div>
+          <p style={{ fontSize: "0.85rem", color: TXT_M, lineHeight: 1.65, marginBottom: 12 }}>{h.highlight}</p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontWeight: 700, color: SEA_D, fontSize: "0.9rem" }}>{h.price}</span>
+            <span style={{ fontSize: "0.82rem", color: TXT_L }}>⭐ {h.rating}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── TRANSPORT ── */
+function TransTab({ transport = [] }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {transport.map((t, i) => (
+        <div key={i} style={{ background: WHITE, border: `1px solid ${BDR}`, borderRadius: 14, padding: "18px 20px", display: "flex", gap: 16, alignItems: "flex-start" }}>
+          <span style={{ fontSize: "2rem", flexShrink: 0 }}>{t.emoji}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: "0.7rem", fontWeight: 700, color: SEA, textTransform: "uppercase", letterSpacing: "0.1em" }}>{t.mode}</div>
+            <div style={{ fontWeight: 700, fontSize: "0.97rem", color: TXT, margin: "4px 0" }}>{t.from} → {t.to}</div>
+            <p style={{ fontSize: "0.85rem", color: TXT_M, lineHeight: 1.65 }}>{t.detail}</p>
+          </div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ fontWeight: 700, color: SEA_D, fontSize: "0.88rem" }}>{t.cost}</div>
+            <div style={{ fontSize: "0.75rem", color: TXT_L, marginTop: 4 }}>⏱ {t.duration}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── HIDDEN GEMS ── */
+function HiddenTab({ gems = [] }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(245px,1fr))", gap: 14 }}>
+      {gems.map((g, i) => (
+        <div key={i} style={{ background: WHITE, border: `1px solid ${BDR_B}`, borderRadius: 16, padding: "22px 20px" }}>
+          <div style={{ fontSize: "2.2rem", marginBottom: 10 }}>{g.emoji}</div>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 8 }}>{g.name}</h3>
+          <p style={{ fontSize: "0.85rem", color: TXT_M, lineHeight: 1.65, marginBottom: 12 }}>{g.why}</p>
+          <div style={{ fontSize: "0.78rem", color: SEA_D, background: SEA_L, border: `1px solid ${BDR}`, padding: "7px 12px", borderRadius: 8 }}>🕐 Best time: {g.bestTime}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── TIPS ── */
+function TipsTab({ packing = [], phrases = [], stateName }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
+      <div style={{ background: WHITE, border: `1px solid ${BDR}`, borderRadius: 16, padding: "24px 22px" }}>
+        <h3 style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 16 }}>🎒 Packing for {stateName}</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {packing.map((item, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <span style={{ color: SEA, fontWeight: 700, flexShrink: 0 }}>✓</span>
+              <span style={{ fontSize: "0.87rem", color: TXT_M }}>{item}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ background: WHITE, border: `1px solid ${BDR}`, borderRadius: 16, padding: "24px 22px" }}>
+        <h3 style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 16 }}>🗣 Local Phrases</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {phrases.map((p, i) => (
+            <div key={i} style={{ background: SEA_L, borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ fontWeight: 700, color: SEA_D, fontSize: "1rem" }}>{p.phrase}</div>
+              <div style={{ fontSize: "0.84rem", color: TXT_M, marginTop: 3 }}>{p.meaning}</div>
+              <div style={{ fontSize: "0.7rem", color: TXT_L, marginTop: 2 }}>{p.language}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
