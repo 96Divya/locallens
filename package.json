@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node backend/server.mjs",
+    "train": "node backend/train-model.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
