@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 
 const SEA = "#2A9D8F";
 const SEA_D = "#1B7A6E";
@@ -499,7 +499,82 @@ export default function App() {
   const [placeQ, setPlaceQ] = useState("");
   const [region, setRegion] = useState("All");
   const [showHidden, setShowHidden] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
+  const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
+  const [authUser, setAuthUser] = useState(null);
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem("locallens_token") || "");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
   const planRef = useRef(null);
+
+  useEffect(() => {
+    if (!authToken) return;
+
+    let cancelled = false;
+    fetch("/api/auth/me", {
+      headers: { Authorization: `Bearer ${authToken}` },
+    })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Session expired.");
+        if (!cancelled) setAuthUser(payload.user);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          localStorage.removeItem("locallens_token");
+          setAuthToken("");
+          setAuthUser(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authToken]);
+
+  const saveAuth = ({ token, user }) => {
+    localStorage.setItem("locallens_token", token);
+    setAuthToken(token);
+    setAuthUser(user);
+    setAuthError("");
+  };
+
+  const submitAuth = async (event) => {
+    event.preventDefault();
+    setAuthLoading(true);
+    setAuthError("");
+
+    try {
+      const response = await fetch(`/api/auth/${authMode}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(authForm),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Authentication failed.");
+      saveAuth(payload);
+      setAuthForm({ name: "", email: "", password: "" });
+    } catch (error) {
+      setAuthError(error.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    if (authToken) {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${authToken}` },
+      }).catch(() => {});
+    }
+
+    localStorage.removeItem("locallens_token");
+    setAuthToken("");
+    setAuthUser(null);
+    setPlan(null);
+    setStep(0);
+  };
 
   const HIDDEN_EXTRA = useMemo(() => ({
     "Himachal Pradesh": ["Tirthan Valley", "Jibhi", "Barot", "Lahaul & Pangi Valley", "Seraj Region", "Prashar Lake", "Karsog", "Rajgundha Valley"],
@@ -552,6 +627,11 @@ export default function App() {
   const togglePlace = (p) => setSelPlaces(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
 
   const generatePlan = async () => {
+    if (!authToken) {
+      setAuthError("Please log in before generating a trip plan.");
+      return;
+    }
+
     setLoading(true);
     setPlan(null);
     const info = INDIA[selState];
@@ -561,6 +641,7 @@ export default function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           stateName: selState,
@@ -575,6 +656,13 @@ export default function App() {
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
+        if (response.status === 401 || response.status === 403) {
+          setAuthError(payload.error || "Please log in to continue.");
+          localStorage.removeItem("locallens_token");
+          setAuthToken("");
+          setAuthUser(null);
+          return;
+        }
         throw new Error(payload.error || "Backend plan generation failed");
       }
 
@@ -683,12 +771,19 @@ Return ONLY valid JSON, no markdown fences:
             <span style={{ fontSize: 26 }}>🇮🇳</span>
             <span style={{ fontSize: "1.65rem", fontWeight: 900, color: TXT }}>Local<em style={{ color: SEA, fontStyle: "italic" }}>Lands</em></span>
           </button>
-          <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: SEA, background: SEA_L, padding: "5px 14px", borderRadius: 100, border: `1px solid ${BDR}` }}>Discover Hidden India</span>
+          {authUser ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <span style={{ fontSize: "0.78rem", color: TXT_M }}>Hi, <strong style={{ color: SEA_D }}>{authUser.name}</strong></span>
+              <button onClick={logout} style={{ fontSize: "0.72rem", fontWeight: 700, color: SEA, background: SEA_L, padding: "7px 14px", borderRadius: 100, border: `1px solid ${BDR}`, cursor: "pointer" }}>Logout</button>
+            </div>
+          ) : (
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: SEA, background: SEA_L, padding: "5px 14px", borderRadius: 100, border: `1px solid ${BDR}` }}>Discover Hidden India</span>
+          )}
         </div>
       </header>
 
       {/* STEP BAR */}
-      {step < 3 && (
+      {authUser && step < 3 && (
         <div style={{ width: "100%", padding: "14px 40px", display: "flex" }}>
           {["Choose State", "Select Places", "Trip Details"].map((l, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -704,6 +799,19 @@ Return ONLY valid JSON, no markdown fences:
 
       {/* MAIN */}
       <main style={{ width: "100%", padding: "0 0 60px" }}>
+        {!authUser ? (
+          <AuthPanel
+            authError={authError}
+            authForm={authForm}
+            authLoading={authLoading}
+            authMode={authMode}
+            setAuthError={setAuthError}
+            setAuthForm={setAuthForm}
+            setAuthMode={setAuthMode}
+            submitAuth={submitAuth}
+          />
+        ) : (
+          <>
 
         {/* ── STEP 0: STATE ── */}
         {step === 0 && (
@@ -945,6 +1053,8 @@ Return ONLY valid JSON, no markdown fences:
             </div>
           </div>
         )}
+          </>
+        )}
       </main>
 
       <footer style={{ borderTop: `1px solid ${BDR}`, padding: "20px 32px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: "0.82rem", color: TXT_M, background: WHITE }}>
@@ -956,6 +1066,103 @@ Return ONLY valid JSON, no markdown fences:
 }
 
 /* ── ITINERARY ── */
+function AuthPanel({
+  authError,
+  authForm,
+  authLoading,
+  authMode,
+  setAuthError,
+  setAuthForm,
+  setAuthMode,
+  submitAuth,
+}) {
+  const isSignup = authMode === "signup";
+
+  return (
+    <section style={{ minHeight: "calc(100vh - 120px)", display: "grid", placeItems: "center", padding: "52px 20px" }}>
+      <div style={{ width: "min(440px, 100%)", background: WHITE, border: `1px solid ${BDR}`, borderRadius: 18, padding: "30px 28px", boxShadow: "0 16px 48px rgba(42,157,143,0.16)" }}>
+        <div style={{ marginBottom: 22, textAlign: "center" }}>
+          <div style={{ display: "inline-block", background: SEA_L, color: SEA_D, fontSize: "0.72rem", fontWeight: 700, padding: "5px 13px", borderRadius: 100, border: `1px solid ${BDR}`, marginBottom: 12 }}>
+            Secure trip planning
+          </div>
+          <h1 style={{ color: TXT, fontSize: "2rem", lineHeight: 1.1, marginBottom: 8 }}>
+            {isSignup ? "Create your LocalLands account" : "Welcome back"}
+          </h1>
+          <p style={{ color: TXT_M, fontSize: "0.94rem", lineHeight: 1.6 }}>
+            {isSignup ? "Save your access before generating personalized travel plans." : "Log in to generate your personalized India itinerary."}
+          </p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, background: BG, borderRadius: 100, padding: 5, marginBottom: 20 }}>
+          {["login", "signup"].map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => {
+                setAuthMode(mode);
+                setAuthError("");
+              }}
+              style={{ border: "none", borderRadius: 100, padding: "10px 12px", cursor: "pointer", fontWeight: 700, color: authMode === mode ? "#fff" : TXT_M, background: authMode === mode ? SEA : "transparent" }}
+            >
+              {mode === "login" ? "Login" : "Sign up"}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={submitAuth} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {isSignup && (
+            <label style={{ display: "flex", flexDirection: "column", gap: 7, color: TXT_M, fontSize: "0.78rem", fontWeight: 700 }}>
+              Name
+              <input
+                value={authForm.name}
+                onChange={(event) => setAuthForm((form) => ({ ...form, name: event.target.value }))}
+                placeholder="Your name"
+                style={{ padding: "13px 14px", borderRadius: 12, border: `1.5px solid ${BDR}`, color: TXT, background: BG, fontSize: "0.92rem" }}
+              />
+            </label>
+          )}
+
+          <label style={{ display: "flex", flexDirection: "column", gap: 7, color: TXT_M, fontSize: "0.78rem", fontWeight: 700 }}>
+            Email
+            <input
+              type="email"
+              value={authForm.email}
+              onChange={(event) => setAuthForm((form) => ({ ...form, email: event.target.value }))}
+              placeholder="you@example.com"
+              style={{ padding: "13px 14px", borderRadius: 12, border: `1.5px solid ${BDR}`, color: TXT, background: BG, fontSize: "0.92rem" }}
+            />
+          </label>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: 7, color: TXT_M, fontSize: "0.78rem", fontWeight: 700 }}>
+            Password
+            <input
+              type="password"
+              value={authForm.password}
+              onChange={(event) => setAuthForm((form) => ({ ...form, password: event.target.value }))}
+              placeholder="Minimum 8 characters"
+              style={{ padding: "13px 14px", borderRadius: 12, border: `1.5px solid ${BDR}`, color: TXT, background: BG, fontSize: "0.92rem" }}
+            />
+          </label>
+
+          {authError && (
+            <div style={{ color: BLUSH_D, background: BLUSH_L, border: `1px solid ${BDR_B}`, borderRadius: 12, padding: "10px 12px", fontSize: "0.82rem", lineHeight: 1.45 }}>
+              {authError}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={authLoading}
+            style={{ marginTop: 4, background: `linear-gradient(135deg,${SEA},${SEA_D})`, color: "#fff", padding: "14px 20px", borderRadius: 100, border: "none", cursor: "pointer", fontSize: "0.98rem", fontWeight: 800, boxShadow: "0 8px 26px rgba(42,157,143,0.28)" }}
+          >
+            {authLoading ? "Please wait..." : isSignup ? "Create Account" : "Login"}
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+}
+
 function ItinTab({ days = [] }) {
   const [open, setOpen] = useState(0);
   return (

@@ -1,6 +1,7 @@
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { getSessionUser, loginUser, logoutUser, signupUser } from "./auth.mjs";
 import { buildTripPlan, loadModel, trainModel } from "./planner.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -8,6 +9,7 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
 const dataDir = path.join(rootDir, "public", "data");
 const modelPath = path.join(rootDir, "backend", "model", "trained-model.json");
+const usersPath = path.join(rootDir, "backend", "data", "users.json");
 const port = Number(process.env.PORT || 8787);
 
 async function ensureModel() {
@@ -25,9 +27,26 @@ function sendJson(res, statusCode, payload) {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
   });
   res.end(JSON.stringify(payload));
+}
+
+function getBearerToken(req) {
+  const header = req.headers.authorization || "";
+  const [type, token] = header.split(" ");
+  return type?.toLowerCase() === "bearer" ? token : "";
+}
+
+async function requireAuth(req, res) {
+  const token = getBearerToken(req);
+  const user = await getSessionUser(usersPath, token);
+  if (!user) {
+    sendJson(res, 401, { ok: false, error: "Please log in to continue." });
+    return null;
+  }
+
+  return user;
 }
 
 function readBody(req) {
@@ -60,8 +79,48 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.url === "/api/auth/signup" && req.method === "POST") {
+    try {
+      const result = await signupUser(usersPath, await readBody(req));
+      sendJson(res, result.status, result.ok ? { ok: true, user: result.user, token: result.token } : { ok: false, error: result.error });
+    } catch (error) {
+      sendJson(res, 500, { ok: false, error: error.message });
+    }
+    return;
+  }
+
+  if (req.url === "/api/auth/login" && req.method === "POST") {
+    try {
+      const result = await loginUser(usersPath, await readBody(req));
+      sendJson(res, result.status, result.ok ? { ok: true, user: result.user, token: result.token } : { ok: false, error: result.error });
+    } catch (error) {
+      sendJson(res, 500, { ok: false, error: error.message });
+    }
+    return;
+  }
+
+  if (req.url === "/api/auth/me" && req.method === "GET") {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+    sendJson(res, 200, { ok: true, user });
+    return;
+  }
+
+  if (req.url === "/api/auth/logout" && req.method === "POST") {
+    await logoutUser(usersPath, getBearerToken(req));
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
   if (req.url === "/api/train" && req.method === "POST") {
     try {
+      const user = await requireAuth(req, res);
+      if (!user) return;
+      if (user.role !== "admin") {
+        sendJson(res, 403, { ok: false, error: "Only admins can retrain the model." });
+        return;
+      }
+
       model = await trainModel({ dataDir, outputPath: modelPath });
       sendJson(res, 200, {
         ok: true,
@@ -77,6 +136,9 @@ const server = http.createServer(async (req, res) => {
 
   if (req.url === "/api/plan" && req.method === "POST") {
     try {
+      const user = await requireAuth(req, res);
+      if (!user) return;
+
       const body = await readBody(req);
       const required = ["stateName", "days", "budgetKey", "styleKey", "stateInfo"];
       const missing = required.filter((key) => !(key in body));
