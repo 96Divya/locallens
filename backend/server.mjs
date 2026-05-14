@@ -1,7 +1,7 @@
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { getSessionUser, loginUser, logoutUser, signupUser } from "./auth.mjs";
+import { createSharedPlan, getSessionUser, getSharedPlan, loginUser, logoutUser, signupUser } from "./auth.mjs";
 import { buildTripPlan, loadModel, trainModel } from "./planner.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -65,6 +65,8 @@ function readBody(req) {
 }
 
 const server = http.createServer(async (req, res) => {
+  const requestUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+
   if (req.method === "OPTIONS") {
     sendJson(res, 204, {});
     return;
@@ -159,6 +161,30 @@ const server = http.createServer(async (req, res) => {
       });
 
       sendJson(res, 200, { ok: true, plan });
+    } catch (error) {
+      sendJson(res, 500, { ok: false, error: error.message });
+    }
+    return;
+  }
+
+  if (req.url === "/api/share" && req.method === "POST") {
+    try {
+      const user = await requireAuth(req, res);
+      if (!user) return;
+
+      const result = await createSharedPlan(usersPath, user.id, await readBody(req));
+      sendJson(res, result.status, result.ok ? { ok: true, id: result.item.id, item: result.item } : { ok: false, error: result.error });
+    } catch (error) {
+      sendJson(res, 500, { ok: false, error: error.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname.startsWith("/api/share/") && req.method === "GET") {
+    try {
+      const shareId = decodeURIComponent(requestUrl.pathname.slice("/api/share/".length));
+      const result = await getSharedPlan(usersPath, shareId);
+      sendJson(res, result.status, result.ok ? { ok: true, item: result.item } : { ok: false, error: result.error });
     } catch (error) {
       sendJson(res, 500, { ok: false, error: error.message });
     }

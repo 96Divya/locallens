@@ -9,13 +9,15 @@ const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 async function readStore(usersPath) {
   try {
     const raw = await fs.readFile(usersPath, "utf8");
-    const store = JSON.parse(raw);
+    const store = JSON.parse(raw.replace(/^\uFEFF/, ""));
     return {
       users: Array.isArray(store.users) ? store.users : [],
       sessions: Array.isArray(store.sessions) ? store.sessions : [],
+      bucketItems: Array.isArray(store.bucketItems) ? store.bucketItems : [],
+      sharedPlans: Array.isArray(store.sharedPlans) ? store.sharedPlans : [],
     };
   } catch (error) {
-    if (error.code === "ENOENT") return { users: [], sessions: [] };
+    if (error.code === "ENOENT") return { users: [], sessions: [], bucketItems: [], sharedPlans: [] };
     throw error;
   }
 }
@@ -161,4 +163,102 @@ export async function logoutUser(usersPath, token) {
   const store = await readStore(usersPath);
   store.sessions = store.sessions.filter((session) => session.token !== token);
   await writeStore(usersPath, store);
+}
+
+export async function listBucketItems(usersPath, userId) {
+  const store = await readStore(usersPath);
+  return store.bucketItems
+    .filter((item) => item.userId === userId)
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+}
+
+export async function saveBucketItem(usersPath, userId, payload) {
+  const plan = payload?.plan;
+  if (!plan?.headline) {
+    return { ok: false, status: 400, error: "A generated plan is required." };
+  }
+
+  const store = await readStore(usersPath);
+  const now = new Date().toISOString();
+  const item = {
+    id: crypto.randomUUID(),
+    userId,
+    title: String(payload.title || plan.headline).trim(),
+    stateName: String(payload.stateName || ""),
+    selectedPlaces: Array.isArray(payload.selectedPlaces) ? payload.selectedPlaces : [],
+    days: Number(payload.days) || 1,
+    budgetKey: String(payload.budgetKey || ""),
+    styleKey: String(payload.styleKey || ""),
+    note: String(payload.note || "").trim(),
+    plan,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  store.bucketItems.push(item);
+  await writeStore(usersPath, store);
+  return { ok: true, status: 201, item };
+}
+
+export async function updateBucketItem(usersPath, userId, itemId, payload) {
+  const store = await readStore(usersPath);
+  const item = store.bucketItems.find((entry) => entry.id === itemId && entry.userId === userId);
+  if (!item) {
+    return { ok: false, status: 404, error: "Saved plan not found." };
+  }
+
+  if ("note" in payload) item.note = String(payload.note || "").trim();
+  if ("title" in payload) item.title = String(payload.title || item.title).trim();
+  item.updatedAt = new Date().toISOString();
+
+  await writeStore(usersPath, store);
+  return { ok: true, status: 200, item };
+}
+
+export async function deleteBucketItem(usersPath, userId, itemId) {
+  const store = await readStore(usersPath);
+  const before = store.bucketItems.length;
+  store.bucketItems = store.bucketItems.filter((item) => !(item.id === itemId && item.userId === userId));
+
+  if (store.bucketItems.length === before) {
+    return { ok: false, status: 404, error: "Saved plan not found." };
+  }
+
+  await writeStore(usersPath, store);
+  return { ok: true, status: 200 };
+}
+
+export async function createSharedPlan(usersPath, userId, payload) {
+  const plan = payload?.plan;
+  if (!plan?.headline) {
+    return { ok: false, status: 400, error: "A generated plan is required before sharing." };
+  }
+
+  const store = await readStore(usersPath);
+  const now = new Date().toISOString();
+  const item = {
+    id: crypto.randomBytes(9).toString("base64url"),
+    userId,
+    stateName: String(payload.stateName || ""),
+    selectedPlaces: Array.isArray(payload.selectedPlaces) ? payload.selectedPlaces : [],
+    days: Number(payload.days) || 1,
+    budgetKey: String(payload.budgetKey || ""),
+    styleKey: String(payload.styleKey || ""),
+    plan,
+    createdAt: now,
+  };
+
+  store.sharedPlans.push(item);
+  await writeStore(usersPath, store);
+  return { ok: true, status: 201, item };
+}
+
+export async function getSharedPlan(usersPath, shareId) {
+  const store = await readStore(usersPath);
+  const item = store.sharedPlans.find((entry) => entry.id === shareId);
+  if (!item) {
+    return { ok: false, status: 404, error: "Shared plan not found." };
+  }
+
+  return { ok: true, status: 200, item };
 }

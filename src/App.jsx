@@ -19,6 +19,7 @@ const INDIA = {
   "Ladakh": { emoji: "☀️", region: "North", tagline: "Land of High Passes", places: ["Leh", "Pangong Lake", "Nubra Valley", "Turtuk", "Diskit", "Hemis Monastery", "Khardung La", "Zanskar Valley", "Hanle", "Magnetic Hill", "Lamayuru", "Alchi Monastery", "Sham Valley", "Aryan Valley (Dah Hanu)", "Kargil", "Drass", "Suru Valley", "Padum", "Phugtal Monastery", "Rangdum"] },
   "Himachal Pradesh": { emoji: "🌲", region: "North", tagline: "Land of Snow-Capped Gods", places: ["Shimla", "Manali", "Dharamshala", "Kasauli", "Dalhousie", "Spiti Valley", "Bir Billing", "Kullu", "Chail", "Kinnaur", "Chitkul", "Kalpa", "Sangla Valley", "Tirthan Valley", "Jibhi", "Sarahan", "Narkanda", "Barot", "Prashar Lake", "Lahaul & Pangi Valley"] },
   "Uttarakhand": { emoji: "🕉️", region: "North", tagline: "Devbhoomi – Land of Gods", places: ["Rishikesh", "Haridwar", "Mussoorie", "Nainital", "Jim Corbett", "Auli", "Lansdowne", "Chakrata", "Munsiyari", "Valley of Flowers", "Kedarnath", "Badrinath", "Gangotri", "Yamunotri", "Chopta", "Binsar", "Kausani", "Ranikhet", "Pithoragarh", "Jaunsar Bawar"] },
+  "Uttar Pradesh": { emoji: "🛕", region: "Central", tagline: "Sacred rivers, royal cities and living heritage", places: ["Agra", "Varanasi", "Lucknow", "Ayodhya", "Mathura", "Vrindavan", "Prayagraj", "Sarnath", "Fatehpur Sikri", "Jhansi", "Noida", "Greater Noida", "Kanpur", "Meerut", "Aligarh", "Chitrakoot", "Kushinagar", "Dudhwa National Park", "Bithoor", "Bateshwar"] },
   "Punjab": { emoji: "🌾", region: "North", tagline: "Land of Five Rivers", places: ["Amritsar", "Chandigarh", "Patiala", "Anandpur Sahib", "Bathinda", "Kapurthala", "Tarn Taran", "Faridkot", "Sirhind", "Kiratpur Sahib"] },
   "Haryana": { emoji: "🏟️", region: "North", tagline: "Cradle of Civilization", places: ["Kurukshetra", "Sultanpur Bird Sanctuary", "Morni Hills", "Badhkal Lake", "Pinjore Gardens", "Damdama Lake", "Panipat", "Sohna", "Bhindawas Lake", "Surajkund"] },
   "Delhi": { emoji: "🏛️", region: "North", tagline: "Heart of India", places: ["Red Fort", "Qutub Minar", "India Gate", "Humayun's Tomb", "Lotus Temple", "Akshardham", "Chandni Chowk", "Lodhi Garden", "Hauz Khas Village", "Jama Masjid", "Raj Ghat", "Purana Qila", "Agrasen Ki Baoli", "Tughlaqabad Fort", "Mehrauli Village"] },
@@ -49,7 +50,7 @@ const INDIA = {
   "Andaman & Nicobar": { emoji: "🏝️", region: "Islands", tagline: "Jewel of Bay of Bengal", places: ["Port Blair", "Havelock Island", "Neil Island", "Radhanagar Beach", "Cellular Jail", "Barren Island", "Little Andaman", "Diglipur", "North Bay Island", "Ross Island", "Jolly Buoy Island", "Elephant Beach", "Baratang Limestone Caves", "Cinque Island", "Chidiya Tapu", "Mount Harriet", "Long Island", "Interview Island", "Passage Island", "Saddle Peak"] },
   "Lakshadweep": { emoji: "🐠", region: "Islands", tagline: "Azure Yonder", places: ["Kavaratti Island", "Agatti Island", "Bangaram Island", "Minicoy Island", "Amindivi Islands", "Kadmat Island", "Kalpeni Island", "Andrott Island", "Kiltan Island", "Bitra Island"] },
   "Puducherry": { emoji: "🇫🇷", region: "South", tagline: "French Riviera of the East", places: ["White Town Pondicherry", "Auroville", "Promenade Beach", "Paradise Beach", "Sri Aurobindo Ashram", "Serenity Beach", "Rock Beach", "Botanical Garden", "Ousteri Lake", "Karaikal", "Mahe", "Yanam", "Chunnambar Backwaters", "Tranquebar", "Arikamedu Roman Site"] },
-  "Daman & Diu": { emoji: "⛵", region: "West", tagline: "Coastal Heritage Union Territory", places: ["Daman Fort", "Diu Fort", "Gangeshwar Temple", "Nagoa Beach", "Silvassa", "Tribal Museum Dadra", "Vanganga Lake", "Dudhni Lake", "Hirwavan Garden", "St Paul's Church Diu"] },
+  "Dadra & Nagar Haveli and Daman & Diu": { emoji: "⛵", region: "West", tagline: "Coastal forts, island beaches and forested escapes", places: ["Daman Fort", "Diu Fort", "Gangeshwar Temple", "Nagoa Beach", "Silvassa", "Tribal Museum Dadra", "Vanganga Lake", "Dudhni Lake", "Hirwavan Garden", "St Paul's Church Diu", "Jampore Beach", "Devka Beach", "Khanvel", "Satmaliya Deer Park"] },
 };
 
 const REGIONS = ["All", "North", "West", "Central", "East", "Northeast", "South", "Islands"];
@@ -279,6 +280,37 @@ function chooseHotels(hotels, budgetKey) {
   }));
 }
 
+function fallbackHotels(stateName, selectedPlaces, budgetKey) {
+  const basePlace = selectedPlaces[0] || stateName;
+  const stayTypes = {
+    budget: [
+      ["Budget guesthouse", 900, 1800, "A simple stay near the main transit or market area."],
+      ["Backpacker hostel", 700, 1400, "Useful for short stays, solo travelers, and flexible check-ins."],
+      ["Family lodge", 1100, 2200, "Practical rooms with easy access to the first sightseeing cluster."],
+    ],
+    moderate: [
+      ["Mid-range hotel", 2500, 5200, "Balanced comfort close to restaurants and transport."],
+      ["Boutique homestay", 2200, 4800, "A warmer local base with breakfast-style convenience."],
+      ["Heritage-style stay", 3200, 6500, "Good for slower evenings after sightseeing-heavy days."],
+    ],
+    luxury: [
+      ["Premium hotel", 7000, 14000, "A higher-comfort base with stronger service and easier transfers."],
+      ["Resort stay", 8500, 18000, "Best when the trip needs downtime between attractions."],
+      ["Luxury boutique stay", 9500, 22000, "A polished option for a more memorable final night."],
+    ],
+  };
+
+  return (stayTypes[budgetKey] || stayTypes.moderate).map(([type, min, max, highlight], index) => ({
+    name: `${stateName} ${type}`,
+    type: type.replace(/\b\w/g, (char) => char.toUpperCase()),
+    location: index === 0 ? basePlace : selectedPlaces[index] || "Central stay area",
+    price: formatRange(min, max, "/night"),
+    highlight,
+    emoji: budgetKey === "luxury" ? "🏨" : budgetKey === "budget" ? "🛏️" : "🏠",
+    rating: "Estimated",
+  }));
+}
+
 function chooseRestaurants({ restaurants, stateName, selectedPlaces, stateInfo, budgetKey, styleKey }) {
   const budgetCap = budgetKey === "budget" ? 900 : budgetKey === "moderate" ? 2000 : 100000;
   const cityCandidates = [
@@ -390,6 +422,7 @@ function buildTripPlan({
   });
   const finalFoods = foods.length ? foods : getStateFoods(stateName, stateInfo.region).slice(0, 4);
   const hotels = chooseHotels(hotelRows, budgetKey);
+  const finalHotels = hotels.length ? hotels : fallbackHotels(stateName, chosenPlaces, budgetKey);
   const hidden = (hiddenExtra || []).slice(0, 4).map((name, index) => ({
     name,
     why: `Less crowded than the headline spots and a strong match for a ${themes[0]}-first trip through ${stateName}.`,
@@ -428,8 +461,8 @@ function buildTripPlan({
     };
   });
 
-  const accommodationSource = hotels.length
-    ? hotels.reduce(
+  const accommodationSource = finalHotels.length
+    ? finalHotels.reduce(
         (acc, hotel) => {
           const [min, max] = hotel.price.match(/\d+/g)?.map(Number) || [0, 0];
           return { min: Math.min(acc.min, min), max: Math.max(acc.max, max) };
@@ -438,6 +471,7 @@ function buildTripPlan({
       )
     : { min: budgetKey === "budget" ? 900 : budgetKey === "luxury" ? 7000 : 2500, max: budgetKey === "budget" ? 1800 : budgetKey === "luxury" ? 14000 : 5500 };
 
+  const nights = Math.max(days - 1, 0);
   const transportMin = budgetInfo.transportPerHop[0] * Math.max(days - 1, 1);
   const transportMax = budgetInfo.transportPerHop[1] * Math.max(days, 1);
 
@@ -447,7 +481,7 @@ function buildTripPlan({
     weatherNote: `Best plan rhythm: follow ${stateInfo.region.toLowerCase()} travel timing, start major sightseeing early, and leave room for weather and traffic shifts.`,
     days: dayPlans,
     food: finalFoods,
-    hotels,
+    hotels: finalHotels,
     transport: [
       {
         mode: budgetKey === "budget" ? "Metro / bus / auto" : budgetKey === "luxury" ? "Private cab" : "Metro + cab mix",
@@ -477,8 +511,8 @@ function buildTripPlan({
       transport: formatRange(transportMin, transportMax, " total"),
       activities: formatRange(budgetInfo.dailyActivities[0], budgetInfo.dailyActivities[1], "/day"),
       total: formatRange(
-        accommodationSource.min * days + budgetInfo.dailyFood[0] * days + transportMin + budgetInfo.dailyActivities[0] * days,
-        accommodationSource.max * days + budgetInfo.dailyFood[1] * days + transportMax + budgetInfo.dailyActivities[1] * days,
+        accommodationSource.min * nights + budgetInfo.dailyFood[0] * days + transportMin + budgetInfo.dailyActivities[0] * days,
+        accommodationSource.max * nights + budgetInfo.dailyFood[1] * days + transportMax + budgetInfo.dailyActivities[1] * days,
         ` for ${days} days`,
       ),
     },
@@ -505,6 +539,7 @@ export default function App() {
   const [authToken, setAuthToken] = useState(() => localStorage.getItem("locallens_token") || "");
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [shareStatus, setShareStatus] = useState("");
   const planRef = useRef(null);
 
   useEffect(() => {
@@ -531,6 +566,44 @@ export default function App() {
       cancelled = true;
     };
   }, [authToken]);
+
+  useEffect(() => {
+    const shareId = new URLSearchParams(window.location.search).get("share");
+    if (!shareId) return;
+
+    let cancelled = false;
+    setLoading(true);
+    setShareStatus("Loading shared plan...");
+
+    fetch(`/api/share/${encodeURIComponent(shareId)}`)
+      .then(async (response) => {
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Shared plan could not be loaded.");
+        return payload.item;
+      })
+      .then((item) => {
+        if (cancelled) return;
+        setSelState(item.stateName || null);
+        setSelPlaces(Array.isArray(item.selectedPlaces) ? item.selectedPlaces : []);
+        setDays(Number(item.days) || 3);
+        setBudget(item.budgetKey || "moderate");
+        setTStyle(item.styleKey || "explorer");
+        setPlan(item.plan);
+        setTab("itinerary");
+        setStep(3);
+        setShareStatus("Shared plan loaded.");
+      })
+      .catch((error) => {
+        if (!cancelled) setShareStatus(error.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const saveAuth = ({ token, user }) => {
     localStorage.setItem("locallens_token", token);
@@ -668,6 +741,7 @@ export default function App() {
 
       const payload = await response.json();
       setPlan(payload.plan);
+      setShareStatus("");
       setTab("itinerary");
       setStep(3);
       setTimeout(() => { if (planRef.current) planRef.current.scrollIntoView({ behavior: "smooth" }); }, 150);
@@ -686,6 +760,7 @@ export default function App() {
         restaurantRows: [],
       });
       setPlan(fallbackPlan);
+      setShareStatus("");
       setTab("itinerary");
       setStep(3);
     } finally {
@@ -743,9 +818,47 @@ Return ONLY valid JSON, no markdown fences:
   };
 
   const reset = () => {
+    if (window.location.search.includes("share=")) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
     setStep(0); setSelState(null); setSelPlaces([]);
     setDays(3); setBudget("moderate"); setTStyle("explorer");
-    setPlan(null); setStateQ(""); setPlaceQ(""); setRegion("All"); setShowHidden(false);
+    setPlan(null); setStateQ(""); setPlaceQ(""); setRegion("All"); setShowHidden(false); setShareStatus("");
+  };
+
+  const sharePlan = async () => {
+    if (!plan) return;
+    if (!authToken) {
+      setShareStatus("Please log in to create a share link.");
+      return;
+    }
+
+    setShareStatus("Creating share link...");
+    try {
+      const response = await fetch("/api/share", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          stateName: selState,
+          selectedPlaces: selPlaces,
+          days,
+          budgetKey: budget,
+          styleKey: tStyle,
+          plan,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not create share link.");
+
+      const shareUrl = `${window.location.origin}${window.location.pathname}?share=${encodeURIComponent(payload.id)}`;
+      await navigator.clipboard.writeText(shareUrl);
+      setShareStatus(`Share link copied: ${shareUrl}`);
+    } catch (error) {
+      setShareStatus(error.message);
+    }
   };
 
   return (
@@ -799,7 +912,7 @@ Return ONLY valid JSON, no markdown fences:
 
       {/* MAIN */}
       <main style={{ width: "100%", padding: "0 0 60px" }}>
-        {!authUser ? (
+        {!authUser && !plan ? (
           <AuthPanel
             authError={authError}
             authForm={authForm}
@@ -1049,6 +1162,12 @@ Return ONLY valid JSON, no markdown fences:
             </div>
 
             <div style={{ textAlign: "center", paddingBottom: 32 }}>
+              <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+                {authUser && (
+                  <button onClick={sharePlan} style={{ background: `linear-gradient(135deg,${BLUSH},${BLUSH_D})`, color: "#fff", border: "none", padding: "12px 28px", borderRadius: 100, cursor: "pointer", fontSize: "0.9rem", fontWeight: 800, boxShadow: "0 8px 24px rgba(224,117,143,0.25)" }}>🔗 Copy Share Link</button>
+                )}
+              </div>
+              {shareStatus && <p style={{ maxWidth: 720, margin: "0 auto 14px", color: shareStatus.includes("copied") || shareStatus.includes("loaded") ? SEA_D : BLUSH_D, fontSize: "0.82rem", lineHeight: 1.55, wordBreak: "break-word" }}>{shareStatus}</p>}
               <button onClick={reset} style={{ background: SEA_L, color: SEA, border: `1px solid ${BDR}`, padding: "12px 32px", borderRadius: 100, cursor: "pointer", fontSize: "0.92rem", fontWeight: 700 }}>🔄 Plan Another Trip</button>
             </div>
           </div>

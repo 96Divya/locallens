@@ -10,6 +10,46 @@ const HOTEL_STATE_MAP = {
   mumbai: "Maharashtra",
 };
 
+const HOTEL_DETAIL_CITY_STATE = {
+  agra: "Uttar Pradesh",
+  lucknow: "Uttar Pradesh",
+  kanpur: "Uttar Pradesh",
+  aligarh: "Uttar Pradesh",
+  ayodhya: "Uttar Pradesh",
+  bareilly: "Uttar Pradesh",
+  jaipur: "Rajasthan",
+  ajmer: "Rajasthan",
+  alwar: "Rajasthan",
+  jodhpur: "Rajasthan",
+  "mount abu": "Rajasthan",
+  "abu road": "Rajasthan",
+  bangalore: "Karnataka",
+  mumbai: "Maharashtra",
+  pune: "Maharashtra",
+  alibag: "Maharashtra",
+  aurangabad: "Maharashtra",
+  nagpur: "Maharashtra",
+  nashik: "Maharashtra",
+  chennai: "Tamil Nadu",
+  hyderabad: "Telangana",
+  kolkata: "West Bengal",
+  ahmedabad: "Gujarat",
+  anand: "Gujarat",
+  disa: "Gujarat",
+  palanpur: "Gujarat",
+  surat: "Gujarat",
+  vadodara: "Gujarat",
+  cochin: "Kerala",
+  ernakulam: "Kerala",
+  alleppey: "Kerala",
+  visakhapatnam: "Andhra Pradesh",
+  bhopal: "Madhya Pradesh",
+  indore: "Madhya Pradesh",
+  amritsar: "Punjab",
+  chandigarh: "Chandigarh",
+  banjar: "Himachal Pradesh",
+};
+
 const STATE_RESTAURANT_CITIES = {
   Delhi: ["Delhi", "Noida", "Ghaziabad", "Gurgaon"],
   Karnataka: ["Bangalore"],
@@ -199,6 +239,8 @@ export function parseCsv(text) {
 
 export function normalizeText(value) {
   return String(value || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
@@ -211,6 +253,14 @@ export function toNumber(value) {
 
 function formatRange(min, max, suffix = "") {
   return `Rs ${Math.round(min)}-${Math.round(max)}${suffix}`;
+}
+
+function estimateHotelPrice(rating) {
+  if (rating >= 8.7) return 6500;
+  if (rating >= 8.1) return 4500;
+  if (rating >= 7.3) return 2800;
+  if (rating >= 6.5) return 1800;
+  return 1200;
 }
 
 function titleCase(value) {
@@ -276,12 +326,73 @@ function chooseHotels(hotels, budgetKey) {
     name: hotel["Hotel Name"],
     type: budgetKey === "budget" ? "Budget" : budgetKey === "luxury" ? "Luxury" : index === 0 ? "Mid-range" : "Boutique",
     location: hotel.Location || "Prime area",
-    price: formatRange(hotel.numericPrice, hotel.numericPrice + hotel.numericTax, "/night"),
+    price: hotel.PriceNote || formatRange(hotel.numericPrice, hotel.numericPrice + hotel.numericTax, "/night"),
     highlight: hotel["Nearest Landmark"]
       ? `Close to ${hotel["Nearest Landmark"]} with ${hotel["Rating Description"]?.toLowerCase() || "solid"} guest feedback.`
-      : `A practical ${budgetKey} pick with ${hotel.Reviews || "many"} reviews and a ${hotel.Rating || "good"} rating.`,
+      : `A practical ${budgetKey} pick with ${String(hotel.Reviews || "many").replace(/\s*reviews?$/i, "")} reviews and a ${hotel.Rating || "good"} rating${hotel.Source ? ` from ${hotel.Source}` : ""}.`,
     emoji: budgetKey === "luxury" ? "🏨" : budgetKey === "budget" ? "🛏️" : "🏠",
-    rating: `${hotel.Rating || "4.0"}/5`,
+    rating: hotel.RatingScale ? `${hotel.Rating || "8.0"}/${hotel.RatingScale}` : `${hotel.Rating || "4.0"}/5`,
+  }));
+}
+
+function stateFromHotelPlace(place) {
+  const normalizedPlace = normalizeText(place);
+  const match = Object.entries(HOTEL_DETAIL_CITY_STATE).find(([city]) => normalizedPlace.includes(city));
+  return match?.[1] || "";
+}
+
+function normalizeHotelDetailRows(rows) {
+  return rows
+    .map((row) => {
+      const state = stateFromHotelPlace(row.Place);
+      const rating = toNumber(row.Rating);
+      const estimatedPrice = estimateHotelPrice(rating || 0);
+      return {
+        "Hotel Name": row["Hotel Name"],
+        State: state,
+        Location: row.Place,
+        Rating: rating ? String(rating) : "",
+        RatingScale: "10",
+        "Rating Description": row.Condition,
+        Reviews: row["Total Reviews"],
+        Price: String(estimatedPrice),
+        Tax: "0",
+        PriceNote: `Estimated Rs ${Math.round(estimatedPrice * 0.8)}-${Math.round(estimatedPrice * 1.25)}/night`,
+        Source: "hotel_details.csv",
+        Description: row.description,
+      };
+    })
+    .filter((row) => row.State && row["Hotel Name"]);
+}
+
+function fallbackHotels(stateName, selectedPlaces, budgetKey) {
+  const basePlace = selectedPlaces[0] || stateName;
+  const stayTypes = {
+    budget: [
+      ["Budget guesthouse", 900, 1800, "A simple stay near the main transit or market area."],
+      ["Backpacker hostel", 700, 1400, "Useful for short stays, solo travelers, and flexible check-ins."],
+      ["Family lodge", 1100, 2200, "Practical rooms with easy access to the first sightseeing cluster."],
+    ],
+    moderate: [
+      ["Mid-range hotel", 2500, 5200, "Balanced comfort close to restaurants and transport."],
+      ["Boutique homestay", 2200, 4800, "A warmer local base with breakfast-style convenience."],
+      ["Heritage-style stay", 3200, 6500, "Good for slower evenings after sightseeing-heavy days."],
+    ],
+    luxury: [
+      ["Premium hotel", 7000, 14000, "A higher-comfort base with stronger service and easier transfers."],
+      ["Resort stay", 8500, 18000, "Best when the trip needs downtime between attractions."],
+      ["Luxury boutique stay", 9500, 22000, "A polished option for a more memorable final night."],
+    ],
+  };
+
+  return (stayTypes[budgetKey] || stayTypes.moderate).map(([type, min, max, highlight], index) => ({
+    name: `${stateName} ${type}`,
+    type: type.replace(/\b\w/g, (char) => char.toUpperCase()),
+    location: index === 0 ? basePlace : selectedPlaces[index] || "Central stay area",
+    price: formatRange(min, max, "/night"),
+    highlight,
+    emoji: budgetKey === "luxury" ? "🏨" : budgetKey === "budget" ? "🛏️" : "🏠",
+    rating: "Estimated",
   }));
 }
 
@@ -344,8 +455,13 @@ function chooseRestaurants({ restaurants, stateName, selectedPlaces, stateInfo, 
 export async function trainModel({ dataDir, outputPath }) {
   const topPlacesPath = path.join(dataDir, "top-places.csv");
   const restaurantsPath = path.join(dataDir, "restaurants.csv");
+  const hotelDetailsPath = path.join(dataDir, "hotel_details.csv");
   const topPlaces = parseCsv(await fs.readFile(topPlacesPath, "utf8"));
   const restaurants = parseCsv(await fs.readFile(restaurantsPath, "utf8"));
+  const hotelDetails = await fs
+    .readFile(hotelDetailsPath, "utf8")
+    .then((text) => normalizeHotelDetailRows(parseCsv(text)))
+    .catch(() => []);
 
   const attractionsByState = {};
   for (const row of topPlaces) {
@@ -370,12 +486,18 @@ export async function trainModel({ dataDir, outputPath }) {
     hotelsByState[stateName] = hotelRows;
   }
 
+  for (const row of hotelDetails) {
+    if (!hotelsByState[row.State]) hotelsByState[row.State] = [];
+    hotelsByState[row.State].push(row);
+  }
+
   const model = {
     generatedAt: new Date().toISOString(),
     stats: {
       stateCount: Object.keys(attractionsByState).length,
       restaurantCityCount: Object.keys(restaurantsByCity).length,
       hotelStateCount: Object.keys(hotelsByState).length,
+      hotelDetailsCount: hotelDetails.length,
     },
     attractionsByState,
     restaurantsByCity,
@@ -448,6 +570,7 @@ export function buildTripPlan({
   });
   const finalFoods = foods.length ? foods : getStateFoods(stateName, stateInfo?.region).slice(0, 4);
   const hotels = chooseHotels(hotelRows, budgetKey);
+  const finalHotels = hotels.length ? hotels : fallbackHotels(stateName, chosenPlaces, budgetKey);
   const hidden = hiddenExtra.slice(0, 4).map((name, index) => ({
     name,
     why: `Less crowded than the headline spots and a strong match for a ${themes[0]}-first trip through ${stateName}.`,
@@ -486,8 +609,8 @@ export function buildTripPlan({
     };
   });
 
-  const accommodationSource = hotels.length
-    ? hotels.reduce(
+  const accommodationSource = finalHotels.length
+    ? finalHotels.reduce(
         (acc, hotel) => {
           const [min, max] = hotel.price.match(/\d+/g)?.map(Number) || [0, 0];
           return { min: Math.min(acc.min, min), max: Math.max(acc.max, max) };
@@ -496,6 +619,7 @@ export function buildTripPlan({
       )
     : { min: budgetKey === "budget" ? 900 : budgetKey === "luxury" ? 7000 : 2500, max: budgetKey === "budget" ? 1800 : budgetKey === "luxury" ? 14000 : 5500 };
 
+  const nights = Math.max(days - 1, 0);
   const transportMin = budgetInfo.transportPerHop[0] * Math.max(days - 1, 1);
   const transportMax = budgetInfo.transportPerHop[1] * Math.max(days, 1);
 
@@ -505,7 +629,7 @@ export function buildTripPlan({
     weatherNote: `Best plan rhythm: follow ${String(stateInfo?.region || "regional").toLowerCase()} travel timing, start major sightseeing early, and leave room for weather and traffic shifts.`,
     days: dayPlans,
     food: finalFoods,
-    hotels,
+    hotels: finalHotels,
     transport: [
       {
         mode: budgetKey === "budget" ? "Metro / bus / auto" : budgetKey === "luxury" ? "Private cab" : "Metro + cab mix",
@@ -535,8 +659,8 @@ export function buildTripPlan({
       transport: formatRange(transportMin, transportMax, " total"),
       activities: formatRange(budgetInfo.dailyActivities[0], budgetInfo.dailyActivities[1], "/day"),
       total: formatRange(
-        accommodationSource.min * days + budgetInfo.dailyFood[0] * days + transportMin + budgetInfo.dailyActivities[0] * days,
-        accommodationSource.max * days + budgetInfo.dailyFood[1] * days + transportMax + budgetInfo.dailyActivities[1] * days,
+        accommodationSource.min * nights + budgetInfo.dailyFood[0] * days + transportMin + budgetInfo.dailyActivities[0] * days,
+        accommodationSource.max * nights + budgetInfo.dailyFood[1] * days + transportMax + budgetInfo.dailyActivities[1] * days,
         ` for ${days} days`,
       ),
     },
