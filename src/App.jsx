@@ -768,7 +768,7 @@ export default function App() {
     }
     return; /*
 
-    const prompt = `You are LocalLands, India's best travel curator. Create a hyper-local, authentic trip plan.
+    const prompt = `You are LocalLens, India's best travel curator. Create a hyper-local, authentic trip plan.
 
 State: ${selState} (${info.tagline})
 Places: ${selPlaces.join(", ")}
@@ -882,7 +882,7 @@ Return ONLY valid JSON, no markdown fences:
         <div style={{ width: "100%", padding: "13px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <button onClick={reset} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 26 }}>🇮🇳</span>
-            <span style={{ fontSize: "1.65rem", fontWeight: 900, color: TXT }}>Local<em style={{ color: SEA, fontStyle: "italic" }}>Lands</em></span>
+            <span style={{ fontSize: "1.65rem", fontWeight: 900, color: TXT }}>Local<em style={{ color: SEA, fontStyle: "italic" }}>Lens</em></span>
           </button>
           {authUser ? (
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -1104,7 +1104,7 @@ Return ONLY valid JSON, no markdown fences:
                       <span style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", animation: "spin .7s linear infinite", display: "inline-block" }} />
                       Crafting your {selState} adventure…
                     </span>
-                  : "✨ Generate My LocalLands Plan"}
+                  : "✨ Generate My LocalLens Plan"}
               </button>
               <p style={{ fontSize: "0.78rem", color: TXT_L, marginTop: 10 }}>AI-powered · Hyper-local · Hidden gems included</p>
             </div>
@@ -1177,7 +1177,7 @@ Return ONLY valid JSON, no markdown fences:
       </main>
 
       <footer style={{ borderTop: `1px solid ${BDR}`, padding: "20px 32px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: "0.82rem", color: TXT_M, background: WHITE }}>
-        <span>🇮🇳 <strong style={{ color: SEA }}>LocalLands</strong> — Discover the Real India</span>
+        <span>🇮🇳 <strong style={{ color: SEA }}>LocalLens</strong> — Discover the Real India</span>
         <span style={{ color: TXT_L }}>36 States & UTs · 1000+ Places · AI-Powered</span>
       </footer>
     </div>
@@ -1205,7 +1205,7 @@ function AuthPanel({
             Secure trip planning
           </div>
           <h1 style={{ color: TXT, fontSize: "2rem", lineHeight: 1.1, marginBottom: 8 }}>
-            {isSignup ? "Create your LocalLands account" : "Welcome back"}
+            {isSignup ? "Create your LocalLens account" : "Welcome back"}
           </h1>
           <p style={{ color: TXT_M, fontSize: "0.94rem", lineHeight: 1.6 }}>
             {isSignup ? "Save your access before generating personalized travel plans." : "Log in to generate your personalized India itinerary."}
