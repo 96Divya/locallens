@@ -1,4 +1,5 @@
 import http from "node:http";
+import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createSharedPlan, getSessionUser, getSharedPlan, loginUser, logoutUser, signupUser } from "./auth.mjs";
@@ -8,6 +9,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
 const dataDir = path.join(rootDir, "public", "data");
+const distDir = path.join(rootDir, "dist");
+const indexPath = path.join(distDir, "index.html");
 const modelPath = path.join(rootDir, "backend", "model", "trained-model.json");
 const usersPath = path.join(rootDir, "backend", "data", "users.json");
 const port = Number(process.env.PORT || 8787);
@@ -30,6 +33,35 @@ function sendJson(res, statusCode, payload) {
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
   });
   res.end(JSON.stringify(payload));
+}
+
+const mimeTypes = {
+  ".css": "text/css; charset=utf-8",
+  ".gif": "image/gif",
+  ".html": "text/html; charset=utf-8",
+  ".ico": "image/x-icon",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".txt": "text/plain; charset=utf-8",
+  ".webp": "image/webp",
+};
+
+async function sendFile(res, filePath) {
+  const data = await fs.readFile(filePath);
+  const extension = path.extname(filePath).toLowerCase();
+  res.writeHead(200, {
+    "Content-Type": mimeTypes[extension] || "application/octet-stream",
+  });
+  res.end(data);
+}
+
+function safeStaticPath(pathname) {
+  const decoded = decodeURIComponent(pathname);
+  const normalized = path.normalize(decoded).replace(/^(\.\.[/\\])+/, "");
+  const filePath = path.join(distDir, normalized);
+  return filePath.startsWith(distDir) ? filePath : "";
 }
 
 function getBearerToken(req) {
@@ -189,6 +221,26 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 500, { ok: false, error: error.message });
     }
     return;
+  }
+
+  if (req.method === "GET" || req.method === "HEAD") {
+    try {
+      const staticPath = requestUrl.pathname === "/" ? indexPath : safeStaticPath(requestUrl.pathname);
+      if (staticPath) {
+        try {
+          await sendFile(res, staticPath);
+          return;
+        } catch (error) {
+          if (error.code !== "ENOENT" && error.code !== "EISDIR") throw error;
+        }
+      }
+
+      await sendFile(res, indexPath);
+      return;
+    } catch {
+      sendJson(res, 404, { ok: false, error: "Build not found. Run npm run build before starting the server." });
+      return;
+    }
   }
 
   sendJson(res, 404, { ok: false, error: "Not found" });

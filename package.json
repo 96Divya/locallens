@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "client": "vite",
+    "start": "node backend/server.mjs",
     "server": "node backend/server.mjs",
     "train": "node backend/train-model.mjs",
     "build": "vite build",
